@@ -218,6 +218,19 @@ if [ -n "$WARNINGS" ]; then
     echo -e "VAULT MAINTENANCE CHECKLIST -- please address before stopping:\n${WARNINGS}"
 fi
 
+# Auto-move resolved investigations to resolved/ subdirectory
+# This enables the pruner to archive them after 30 days
+if [ -d "${CWD}/vault/investigations" ]; then
+    for f in "${CWD}/vault/investigations"/*.md; do
+        [ -f "$f" ] || continue
+        [ "$(basename "$f")" = "_template.md" ] && continue
+        if grep -qi "status:.*\(resolved\|implemented\|obsolete\)" "$f" 2>/dev/null; then
+            mkdir -p "${CWD}/vault/investigations/resolved" 2>/dev/null || true
+            mv "$f" "${CWD}/vault/investigations/resolved/" 2>/dev/null || true
+        fi
+    done
+fi
+
 # Clean up session-scoped sentinel tracking
 if [ -n "$SESSION_ID" ]; then
     rm -rf "${CWD}/.sentinel/sessions/${SHORT_ID}" 2>/dev/null || true
