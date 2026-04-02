@@ -31,8 +31,9 @@ if [ ! -d "$VAULT_DIR" ]; then
 fi
 
 # --- Token budget management ---
-# Default budget: ~2000 tokens ≈ 7000 chars (using 3.5 chars/token heuristic)
-TOKEN_BUDGET="${SENTINEL_TOKEN_BUDGET:-2000}"
+# Default budget: ~10000 tokens ≈ 35000 chars (using 3.5 chars/token heuristic)
+# This is <5% of Sonnet's 200K window and <1% of Opus's 1M window.
+TOKEN_BUDGET="${SENTINEL_TOKEN_BUDGET:-10000}"
 CHAR_BUDGET=$(( TOKEN_BUDGET * 35 / 10 ))
 CHARS_USED=0
 

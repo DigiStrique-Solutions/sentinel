@@ -15,7 +15,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), version
   - Updated all 3 CLAUDE.md templates: `minimal.md`, `standard.md`, `team.md`
 
 - **Self-reducing session-start footprint** — Token-budgeted vault loading with priority ordering
-  - Configurable token budget via `SENTINEL_TOKEN_BUDGET` env var (default: 2,000 tokens ≈ 7,000 chars)
+  - Configurable token budget via `SENTINEL_TOKEN_BUDGET` env var (default: 10,000 tokens — <5% of Sonnet's 200K, <1% of Opus's 1M)
   - Priority-based loading: open investigations (highest) → relevant gotchas → session recovery → learned patterns → team activity (lowest)
   - Relevance filtering: gotchas matched against `git diff --name-only HEAD~5` to load only those relevant to recently changed code
   - Budget reporting: session-start output includes `~N tokens` usage indicator
