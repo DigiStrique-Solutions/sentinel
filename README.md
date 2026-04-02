@@ -88,12 +88,13 @@ Next session starts → better context loaded
 
 ## What's Included
 
-### Hooks (14)
+### Hooks (15)
 
-**Core (10):**
+**Core (11):**
 - `session-start-git` — Auto-creates branch if on main/master (Git Autopilot)
 - `session-start-loader` — Loads vault context (investigations, gotchas, recovery)
 - `session-start-index` — Builds searchable vault index
+- `session-start-prune` — Auto-archives stale vault entries every 5th session
 - `pre-tool-gotcha` — Surfaces relevant gotchas before tool execution
 - `pre-tool-scope` — Validates file edits stay within task scope
 - `post-tool-tracker` — Tracks files modified during session
@@ -132,11 +133,12 @@ Next session starts → better context loaded
 
 Common rules (8) plus language-specific extensions for Python (3) and TypeScript (3).
 
-### Commands (5)
+### Commands (6)
 
 - `/sentinel bootstrap` — Scaffold vault and workflows for a new project
 - `/sentinel health` — Dashboard showing vault health metrics
 - `/sentinel doctor` — Diagnose and fix common setup issues
+- `/sentinel prune` — Deep vault cleanup (duplicates, dead refs, archive management)
 - `/sentinel eject` — Export all Sentinel content to standalone files
 - `/sentinel config` — View and modify Sentinel settings
 

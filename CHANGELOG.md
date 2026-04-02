@@ -4,6 +4,35 @@ All notable changes to Sentinel will be documented in this file.
 
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.0] - 2026-04-02
+
+### Added
+
+- **Auto-pruning** — Three-tier vault data management that keeps the vault clean automatically
+  - **Tier 1 (auto-archive):** Runs every 5th session via `session-start-prune.sh`
+    - Session recovery files >7 days old
+    - Resolved investigations >30 days old
+    - Changelog entries >90 days old
+    - Superseded/deprecated decisions
+    - Empty directories cleaned up
+  - **Tier 2 (auto-flag):** Outputs warnings for entries needing human review
+    - Gotchas where all referenced source files have been deleted
+    - Open investigations older than 60 days
+    - Learned patterns with 0 observations in 30+ days
+  - **Tier 3 (manual):** `/sentinel prune` command for deep cleanup
+    - Duplicate detection across gotchas, investigations, and decisions
+    - Cross-reference validation (file paths still exist?)
+    - Pattern health report (confidence scores, observation counts)
+    - Vault size summary table
+    - Archive cleanup (>180 day old archive entries, with user approval)
+  - All pruning archives to `vault/.archive/` — never deletes
+  - Archive preserves original directory structure for easy recovery
+
+### Changed
+
+- Hook count increased from 14 to 15 (11 core + 4 optional)
+- Command count increased from 5 to 6 (added `/sentinel prune`)
+
 ## [0.2.0] - 2026-04-02
 
 ### Added
