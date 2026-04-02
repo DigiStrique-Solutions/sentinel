@@ -68,7 +68,7 @@ fi
 
 # --- 2. Check transcript for failure patterns ---
 if [ -n "$TRANSCRIPT_PATH" ] && [ -f "$TRANSCRIPT_PATH" ]; then
-    FAILURE_SIGNALS=$(tail -100 "$TRANSCRIPT_PATH" | grep -ciE "(failed|error|doesn.t work|broke|regression|rollback)" 2>/dev/null || echo "0")
+    FAILURE_SIGNALS=$(tail -100 "$TRANSCRIPT_PATH" | grep -ciE "(failed|error|doesn.t work|broke|regression|rollback)" 2>/dev/null; true)
     if [ "$FAILURE_SIGNALS" -gt 3 ]; then
         # Check if there's a recent investigation file
         RECENT_INVESTIGATION=$(find "${VAULT_DIR}/investigations" -name "20*" -mmin -60 -type f 2>/dev/null | head -1)
@@ -95,7 +95,7 @@ fi
 
 # --- 4. Check if test files were written — remind about adversarial eval ---
 if [ -f "$MODIFIED_FILE" ]; then
-    TEST_FILES=$(grep -cE '(test_|_test\.|\.test\.|\.spec\.)' "$MODIFIED_FILE" 2>/dev/null || echo "0")
+    TEST_FILES=$(grep -cE '(test_|_test\.|\.test\.|\.spec\.)' "$MODIFIED_FILE" 2>/dev/null; true)
     if [ "$TEST_FILES" -gt 0 ]; then
         WARNINGS="${WARNINGS}\n- [ ] ${TEST_FILES} test file(s) written — consider adversarial evaluation to verify test quality."
     fi
@@ -120,8 +120,8 @@ fi
 TODO_FILE="${SENTINEL_DIR}/todos.json"
 if [ -f "$TODO_FILE" ]; then
     # Count pending and in_progress items
-    PENDING=$(jq '[.todos[] | select(.status == "pending")] | length' "$TODO_FILE" 2>/dev/null || echo "0")
-    IN_PROGRESS=$(jq '[.todos[] | select(.status == "in_progress")] | length' "$TODO_FILE" 2>/dev/null || echo "0")
+    PENDING=$(jq '[.todos[] | select(.status == "pending")] | length' "$TODO_FILE" 2>/dev/null; true)
+    IN_PROGRESS=$(jq '[.todos[] | select(.status == "in_progress")] | length' "$TODO_FILE" 2>/dev/null; true)
     INCOMPLETE=$((PENDING + IN_PROGRESS))
 
     if [ "$INCOMPLETE" -gt 0 ]; then
@@ -137,21 +137,21 @@ fi
 EVIDENCE_FILE="${SENTINEL_DIR}/evidence.log"
 if [ -n "$FILES_CHANGED" ] && [ "$FILE_COUNT" -gt 0 ]; then
     # Determine what types of source files were modified
-    HAS_PYTHON=$(grep -cE '\.py$' "$MODIFIED_FILE" 2>/dev/null || echo "0")
-    HAS_JS_TS=$(grep -cE '\.(tsx?|jsx?)$' "$MODIFIED_FILE" 2>/dev/null || echo "0")
+    HAS_PYTHON=$(grep -cE '\.py$' "$MODIFIED_FILE" 2>/dev/null; true)
+    HAS_JS_TS=$(grep -cE '\.(tsx?|jsx?)$' "$MODIFIED_FILE" 2>/dev/null; true)
 
     if [ -f "$EVIDENCE_FILE" ]; then
         # Check for test execution
-        TEST_RUNS=$(grep -c '|test:' "$EVIDENCE_FILE" 2>/dev/null || echo "0")
-        TEST_PASSES=$(grep -c '|test:.*|pass|' "$EVIDENCE_FILE" 2>/dev/null || echo "0")
+        TEST_RUNS=$(grep -c '|test:' "$EVIDENCE_FILE" 2>/dev/null; true)
+        TEST_PASSES=$(grep -c '|test:.*|pass|' "$EVIDENCE_FILE" 2>/dev/null; true)
         TEST_FAILS=$(grep '|test:.*|fail' "$EVIDENCE_FILE" 2>/dev/null | tail -1 || echo "")
 
         # Check for lint execution
-        LINT_RUNS=$(grep -c '|lint:' "$EVIDENCE_FILE" 2>/dev/null || echo "0")
+        LINT_RUNS=$(grep -c '|lint:' "$EVIDENCE_FILE" 2>/dev/null; true)
         LINT_FAILS=$(grep '|lint:.*|fail' "$EVIDENCE_FILE" 2>/dev/null | tail -1 || echo "")
 
         # Check for type checking
-        TYPE_RUNS=$(grep -c '|typecheck|' "$EVIDENCE_FILE" 2>/dev/null || echo "0")
+        TYPE_RUNS=$(grep -c '|typecheck|' "$EVIDENCE_FILE" 2>/dev/null; true)
 
         # --- Test verification ---
         if [ "$TEST_RUNS" -eq 0 ]; then
@@ -159,8 +159,8 @@ if [ -n "$FILES_CHANGED" ] && [ "$FILE_COUNT" -gt 0 ]; then
         elif [ -n "$TEST_FAILS" ]; then
             FAIL_TIME=$(echo "$TEST_FAILS" | cut -d'|' -f1)
             # Check if there's a passing test AFTER the last failure
-            LAST_FAIL_LINE=$(grep -n '|test:.*|fail' "$EVIDENCE_FILE" 2>/dev/null | tail -1 | cut -d: -f1)
-            LAST_PASS_LINE=$(grep -n '|test:.*|pass' "$EVIDENCE_FILE" 2>/dev/null | tail -1 | cut -d: -f1)
+            LAST_FAIL_LINE=$(grep -n '|test:.*|fail' "$EVIDENCE_FILE" 2>/dev/null | tail -1 | cut -d: -f1 || true)
+            LAST_PASS_LINE=$(grep -n '|test:.*|pass' "$EVIDENCE_FILE" 2>/dev/null | tail -1 | cut -d: -f1 || true)
             if [ -z "$LAST_PASS_LINE" ] || [ "${LAST_PASS_LINE:-0}" -lt "${LAST_FAIL_LINE:-0}" ]; then
                 WARNINGS="${WARNINGS}\n- [ ] **TESTS FAILED** — Last test run at ${FAIL_TIME} ended with failure. No subsequent passing run found."
             fi
@@ -177,8 +177,8 @@ if [ -n "$FILES_CHANGED" ] && [ "$FILE_COUNT" -gt 0 ]; then
         # --- Lint failure check ---
         if [ -n "$LINT_FAILS" ]; then
             LINT_FAIL_TIME=$(echo "$LINT_FAILS" | cut -d'|' -f1)
-            LAST_LINT_FAIL=$(grep -n '|lint:.*|fail' "$EVIDENCE_FILE" 2>/dev/null | tail -1 | cut -d: -f1)
-            LAST_LINT_PASS=$(grep -n '|lint:.*|pass' "$EVIDENCE_FILE" 2>/dev/null | tail -1 | cut -d: -f1)
+            LAST_LINT_FAIL=$(grep -n '|lint:.*|fail' "$EVIDENCE_FILE" 2>/dev/null | tail -1 | cut -d: -f1 || true)
+            LAST_LINT_PASS=$(grep -n '|lint:.*|pass' "$EVIDENCE_FILE" 2>/dev/null | tail -1 | cut -d: -f1 || true)
             if [ -z "$LAST_LINT_PASS" ] || [ "${LAST_LINT_PASS:-0}" -lt "${LAST_LINT_FAIL:-0}" ]; then
                 WARNINGS="${WARNINGS}\n- [ ] **LINT FAILED** — Last lint at ${LINT_FAIL_TIME} ended with failure. No subsequent passing run found."
             fi
@@ -211,7 +211,7 @@ if [ -n "$WARNINGS" ]; then
     if [ -f "$PLUGIN_LOGGER" ]; then
         REPO_ROOT="$CWD" source "$PLUGIN_LOGGER"
         # Count the number of warnings
-        WARN_COUNT=$(echo -e "$WARNINGS" | grep -c '^\- \[' 2>/dev/null || echo "0")
+        WARN_COUNT=$(echo -e "$WARNINGS" | grep -c '^\- \[' 2>/dev/null; true)
         log_activity "Quality gate warnings: ${WARN_COUNT} issue(s) flagged at session end"
     fi
 

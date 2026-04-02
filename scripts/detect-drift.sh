@@ -35,7 +35,7 @@ fi
 STALE_DOCS=""
 
 # Check each architecture doc for dead references
-find "$ARCH_DIR" -name "*.md" -type f 2>/dev/null | while read -r doc; do
+while read -r doc; do
     DOC_REL="${doc#${VAULT_DIR}/}"
     DEAD_REFS=""
     DRIFT_DIRS=""
@@ -44,19 +44,15 @@ find "$ARCH_DIR" -name "*.md" -type f 2>/dev/null | while read -r doc; do
     # Matches patterns like src/..., tests/..., lib/..., app/..., packages/...
     REFS=$(grep -oE '(src|tests|lib|app|packages)/[a-zA-Z0-9_./-]+\.(py|tsx?|jsx?|go|rs|java|rb|swift|kt|sh|json|toml|yaml|yml|md)' "$doc" 2>/dev/null | sort -u || echo "")
 
-    if [ -z "$REFS" ]; then
-        continue
+    # Check each referenced file for dead refs
+    if [ -n "$REFS" ]; then
+        while IFS= read -r ref; do
+            [ -z "$ref" ] && continue
+            if [ ! -f "${PROJECT_ROOT}/${ref}" ]; then
+                DEAD_REFS="${DEAD_REFS}\n    - \`${ref}\` no longer exists"
+            fi
+        done <<< "$REFS"
     fi
-
-    # Check each referenced file
-    while IFS= read -r ref; do
-        [ -z "$ref" ] && continue
-
-        # Check if the referenced file still exists
-        if [ ! -f "${PROJECT_ROOT}/${ref}" ]; then
-            DEAD_REFS="${DEAD_REFS}\n    - \`${ref}\` no longer exists"
-        fi
-    done <<< "$REFS"
 
     # Check if any modified directories overlap with directories mentioned in this doc
     if [ -n "$MODIFIED_DIRS" ]; then
@@ -66,7 +62,7 @@ find "$ARCH_DIR" -name "*.md" -type f 2>/dev/null | while read -r doc; do
         while IFS= read -r doc_dir; do
             [ -z "$doc_dir" ] && continue
             # Check if any modified directory starts with this doc directory
-            if echo "$MODIFIED_DIRS" | grep -q "${PROJECT_ROOT}/${doc_dir}" 2>/dev/null; then
+            if echo "$MODIFIED_DIRS" | grep -q "${doc_dir%/}" 2>/dev/null; then
                 DRIFT_DIRS="${DRIFT_DIRS}\n    - \`${doc_dir}\` had files modified this session"
             fi
         done <<< "$DOC_DIRS"
@@ -82,4 +78,4 @@ find "$ARCH_DIR" -name "*.md" -type f 2>/dev/null | while read -r doc; do
             echo -e "    Modified areas:${DRIFT_DIRS}"
         fi
     fi
-done
+done < <(find "$ARCH_DIR" -name "*.md" -type f 2>/dev/null)
