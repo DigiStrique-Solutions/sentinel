@@ -95,6 +95,11 @@ if [ -d "${VAULT_DIR}/investigations" ]; then
     if [ -n "$OPEN_INVESTIGATIONS" ]; then
         SECTION="\n\n## OPEN INVESTIGATIONS (check before attempting fixes)\n${OPEN_INVESTIGATIONS}"
         add_to_context "$SECTION" || true  # Always try — highest priority
+
+        # Track loaded investigations for /sentinel stats
+        SENTINEL_STATS_DIR="${CWD}/.sentinel"
+        mkdir -p "$SENTINEL_STATS_DIR" 2>/dev/null || true
+        echo -e "$OPEN_INVESTIGATIONS" | grep -oE '\*\*[^*]+\*\*' | sed 's/\*\*//g' > "${SENTINEL_STATS_DIR}/investigations-loaded.txt" 2>/dev/null || true
     fi
 
     # Count resolved investigations without loading them

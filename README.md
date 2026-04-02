@@ -153,7 +153,7 @@ Next session starts → better context loaded
 
 Common rules (8) plus language-specific extensions for Python (3) and TypeScript (3).
 
-### Commands (10)
+### Commands (11)
 
 - `/sentinel bootstrap` — Scaffold vault and workflows for a new project
 - `/sentinel health` — Dashboard showing vault health metrics
@@ -165,6 +165,7 @@ Common rules (8) plus language-specific extensions for Python (3) and TypeScript
 - `/sentinel loop` — Convergence loop: repeat a task until a condition is met (lint cleanup, test fixes, prompt tuning)
 - `/sentinel batch` — Map-reduce: break a huge task into work items, process each with sub-agents (codemap generation, mass migration, bulk docs)
 - `/sentinel context` — Audit all context sources with token estimates and optimization recommendations
+- `/sentinel stats` — Effectiveness metrics: vault health, knowledge reuse rates, code discipline trends
 
 ### Workflows (13)
 

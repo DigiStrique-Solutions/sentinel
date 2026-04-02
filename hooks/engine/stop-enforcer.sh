@@ -298,6 +298,79 @@ if [ -d "${CWD}/vault/investigations" ]; then
     done
 fi
 
+# --- Collect session stats before cleanup ---
+# Append one session record to vault/.sentinel-stats.json for /sentinel stats
+if [ -n "$SESSION_ID" ] && [ -d "$VAULT_DIR" ]; then
+    STATS_FILE="${VAULT_DIR}/.sentinel-stats.json"
+    TODAY=$(date +%Y-%m-%d)
+
+    # Gather metrics from session data (before it's cleaned up)
+    STATS_TESTS_RUN="false"
+    STATS_TESTS_PASSED="false"
+    STATS_LINT_RUN="false"
+    STATS_LINT_PASSED="false"
+    STATS_GOTCHA_HITS=0
+    STATS_INVESTIGATIONS_LOADED=0
+    STATS_INVESTIGATION_RESOLVED="false"
+
+    if [ -f "$EVIDENCE_FILE" ]; then
+        grep -q '|test:' "$EVIDENCE_FILE" 2>/dev/null && STATS_TESTS_RUN="true"
+        # Last test entry is a pass
+        LAST_TEST=$(grep '|test:' "$EVIDENCE_FILE" 2>/dev/null | tail -1 || true)
+        if echo "$LAST_TEST" | grep -q '|pass' 2>/dev/null; then
+            STATS_TESTS_PASSED="true"
+        fi
+        grep -q '|lint:' "$EVIDENCE_FILE" 2>/dev/null && STATS_LINT_RUN="true"
+        LAST_LINT=$(grep '|lint:' "$EVIDENCE_FILE" 2>/dev/null | tail -1 || true)
+        if echo "$LAST_LINT" | grep -q '|pass' 2>/dev/null; then
+            STATS_LINT_PASSED="true"
+        fi
+    fi
+
+    GOTCHA_HITS_FILE="${SENTINEL_DIR}/gotcha-hits.txt"
+    if [ -f "$GOTCHA_HITS_FILE" ]; then
+        STATS_GOTCHA_HITS=$(awk '{s+=$1} END {print s+0}' "$GOTCHA_HITS_FILE" 2>/dev/null || echo "0")
+    fi
+
+    INVESTIGATIONS_LOADED_FILE="${CWD}/.sentinel/investigations-loaded.txt"
+    if [ -f "$INVESTIGATIONS_LOADED_FILE" ]; then
+        STATS_INVESTIGATIONS_LOADED=$(wc -l < "$INVESTIGATIONS_LOADED_FILE" | tr -d ' ')
+    fi
+
+    # Check if any investigation was resolved this session
+    if [ -d "${VAULT_DIR}/investigations/resolved" ]; then
+        # Were any resolved files modified in the last few minutes? (proxy for "resolved this session")
+        RECENTLY_RESOLVED=$(find "${VAULT_DIR}/investigations/resolved" -name "*.md" -mmin -5 -type f 2>/dev/null | wc -l | tr -d ' ')
+        if [ "$RECENTLY_RESOLVED" -gt 0 ]; then
+            STATS_INVESTIGATION_RESOLVED="true"
+        fi
+    fi
+
+    # Build JSON record and append
+    STATS_RECORD=$(jq -n \
+        --arg date "$TODAY" \
+        --arg sid "$SHORT_ID" \
+        --argjson files "$FILE_COUNT" \
+        --argjson tests_run "$STATS_TESTS_RUN" \
+        --argjson tests_passed "$STATS_TESTS_PASSED" \
+        --argjson lint_run "$STATS_LINT_RUN" \
+        --argjson lint_passed "$STATS_LINT_PASSED" \
+        --argjson gotcha_hits "$STATS_GOTCHA_HITS" \
+        --argjson investigations_loaded "$STATS_INVESTIGATIONS_LOADED" \
+        --argjson investigation_resolved "$STATS_INVESTIGATION_RESOLVED" \
+        '{date: $date, session_id: $sid, files_modified: $files, tests_run: $tests_run, tests_passed: $tests_passed, lint_run: $lint_run, lint_passed: $lint_passed, gotcha_hits: $gotcha_hits, investigations_loaded: $investigations_loaded, investigation_resolved: $investigation_resolved}' 2>/dev/null)
+
+    if [ -n "$STATS_RECORD" ]; then
+        if [ -f "$STATS_FILE" ]; then
+            # Append to existing array
+            jq --argjson rec "$STATS_RECORD" '.sessions += [$rec]' "$STATS_FILE" > "${STATS_FILE}.tmp" 2>/dev/null && mv "${STATS_FILE}.tmp" "$STATS_FILE" || true
+        else
+            # Create new file
+            echo "{\"sessions\": [${STATS_RECORD}]}" | jq '.' > "$STATS_FILE" 2>/dev/null || true
+        fi
+    fi
+fi
+
 # Clean up session-scoped sentinel tracking
 if [ -n "$SESSION_ID" ]; then
     rm -rf "${CWD}/.sentinel/sessions/${SHORT_ID}" 2>/dev/null || true

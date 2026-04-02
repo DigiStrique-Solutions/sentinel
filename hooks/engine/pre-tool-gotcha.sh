@@ -83,6 +83,16 @@ fi
 # Output warnings if matches were found
 if [ -n "$MATCHES" ]; then
     echo -e "GOTCHA ALERT for $(basename "$FILE_PATH") -- review before editing:${MATCHES}"
+
+    # Track gotcha hits for /sentinel stats
+    SESSION_ID=$(echo "$INPUT" | jq -r '.session_id // empty')
+    SENTINEL_DIR="${CWD}/.sentinel"
+    if [ -n "$SESSION_ID" ]; then
+        SHORT_ID="${SESSION_ID:0:12}"
+        SENTINEL_DIR="${CWD}/.sentinel/sessions/${SHORT_ID}"
+    fi
+    mkdir -p "$SENTINEL_DIR" 2>/dev/null || true
+    echo "${MATCH_COUNT}" >> "${SENTINEL_DIR}/gotcha-hits.txt"
 fi
 
 exit 0

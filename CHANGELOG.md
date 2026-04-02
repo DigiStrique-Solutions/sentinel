@@ -4,6 +4,26 @@ All notable changes to Sentinel will be documented in this file.
 
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.11.0] - 2026-04-02
+
+### Added
+
+- **Effectiveness metrics** (`/sentinel stats`) — Shows whether Sentinel is actually helping, with three data sections:
+  - **Vault Health**: Investigation count and resolution rate, gotcha count with churn (added/removed), decision and pattern counts
+  - **Knowledge Reuse**: Gotcha surfacing count (how many times a gotcha was shown before an edit), investigation load count (how many times an investigation was loaded and led to resolution)
+  - **Code Discipline**: Test/lint run rates across sessions, conventional commit breakdown, fix-to-feat ratio
+  - Supports `--period 7d|30d|90d` time windows and `--json` for machine-readable output
+  - Degrades gracefully: vault health always available, reuse/discipline data appears after first few sessions
+
+- **Session stats collection** — Three hooks now track data for `/sentinel stats`:
+  - `pre-tool-gotcha.sh` — Records gotcha hit count per session
+  - `session-start-loader.sh` — Records which investigations were loaded at session start
+  - `stop-enforcer.sh` — Aggregates session metrics into `vault/.sentinel-stats.json` before cleanup
+
+### Changed
+
+- Command count increased from 10 to 11 (added `/sentinel stats`)
+
 ## [0.10.0] - 2026-04-02
 
 ### Added
