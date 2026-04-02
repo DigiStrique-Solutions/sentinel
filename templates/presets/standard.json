@@ -17,8 +17,7 @@
     "completed",
     "planning",
     "scripts",
-    "evals",
-    "design"
+    "prompts"
   ],
   "templates": [
     "investigations/_template.md",

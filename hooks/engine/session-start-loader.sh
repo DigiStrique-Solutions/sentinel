@@ -157,7 +157,17 @@ if [ -n "$MANIFEST_FILE" ]; then
     fi
 fi
 
-# --- 7. Summary counts ---
+# --- 7. CLAUDE.md fact checking ---
+PLUGIN_ROOT="${CLAUDE_PLUGIN_ROOT:-$(cd "$(dirname "$0")/../.." && pwd)}"
+FACTS_SCRIPT="${PLUGIN_ROOT}/scripts/check-facts.sh"
+if [ -x "$FACTS_SCRIPT" ]; then
+    FACTS_OUTPUT=$("$FACTS_SCRIPT" "$CWD" 2>/dev/null || echo "")
+    if [ -n "$FACTS_OUTPUT" ]; then
+        CONTEXT="${CONTEXT}\n\n## CLAUDE.md FACT CHECK\n${FACTS_OUTPUT}"
+    fi
+fi
+
+# --- 8. Summary counts ---
 INVESTIGATION_COUNT=0
 GOTCHA_COUNT=0
 if [ -d "${VAULT_DIR}/investigations" ]; then

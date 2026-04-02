@@ -108,8 +108,7 @@ Knowledge vault for this project. Claude reads and writes here to maintain conte
 | `completed/` | Completed feature/task summaries |
 | `planning/` | PRDs, task lists, implementation plans |
 | `scripts/` | Utility scripts |
-| `evals/` | Adversarial evaluation results |
-| `design/` | UI/UX design tokens, guidelines, references |
+| `prompts/` | Curated user-facing prompts by vertical/persona |
 
 ## How It Works
 

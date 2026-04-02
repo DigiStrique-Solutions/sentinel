@@ -1,6 +1,6 @@
 {
   "name": "sentinel",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "description": "Self-improving development methodology for Claude Code",
   "author": "Poojan Ajani",
   "license": "MIT",

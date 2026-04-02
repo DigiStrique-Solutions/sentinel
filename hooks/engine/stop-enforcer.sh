@@ -101,6 +101,19 @@ if [ -f "$MODIFIED_FILE" ]; then
     fi
 fi
 
+# --- 4b. Documentation drift detection ---
+# When source files were modified, check if architecture docs reference deleted/moved files
+if [ -n "$FILES_CHANGED" ]; then
+    PLUGIN_ROOT="${CLAUDE_PLUGIN_ROOT:-$(cd "$(dirname "$0")/../.." && pwd)}"
+    DRIFT_SCRIPT="${PLUGIN_ROOT}/scripts/detect-drift.sh"
+    if [ -x "$DRIFT_SCRIPT" ]; then
+        DRIFT_OUTPUT=$("$DRIFT_SCRIPT" "$CWD" "$MODIFIED_FILE" 2>/dev/null || echo "")
+        if [ -n "$DRIFT_OUTPUT" ]; then
+            WARNINGS="${WARNINGS}\n\n**DOCUMENTATION DRIFT DETECTED** — architecture docs reference files that changed or no longer exist:\n${DRIFT_OUTPUT}\n- [ ] Update the stale architecture docs listed above to reflect current code."
+        fi
+    fi
+fi
+
 # --- 5. Clean up old session recovery files ---
 if [ -d "${VAULT_DIR}/session-recovery" ]; then
     # Compaction recovery files: delete after 4 hours

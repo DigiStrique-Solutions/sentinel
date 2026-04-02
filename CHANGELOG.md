@@ -4,6 +4,28 @@ All notable changes to Sentinel will be documented in this file.
 
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.0] - 2026-04-02
+
+### Added
+
+- **Documentation drift detection** — Automatically finds stale architecture docs at session end
+  - `scripts/detect-drift.sh` — Scans `vault/architecture/` docs for file path references (`src/...`, `tests/...`, etc.) and cross-references against the actual filesystem
+  - Detects dead references (files that no longer exist) and modified areas (directories with changes this session)
+  - Integrated into `stop-enforcer.sh` — runs when source files were modified, outputs stale doc warnings telling Claude to update them
+  - Zero config: works automatically for any project with `vault/architecture/` docs
+
+- **CLAUDE.md fact checking** — Verifies numerical claims against actual codebase at session start
+  - `scripts/check-facts.sh` — Greps CLAUDE.md for patterns like "209 connector tools", "20 controllers", etc.
+  - Verifies against actual file/symbol counts (e.g., `@connector_tool` decorators, `.py` files in controllers/)
+  - Warns when a claimed number differs from reality by >10%
+  - Checks: connector tools (total + per platform), controllers, ORM entities, SKILL.md files, API client modules
+  - Integrated into `session-start-loader.sh` — runs at session start, outputs warnings so Claude updates CLAUDE.md
+
+### Changed
+
+- `stop-enforcer.sh` — Calls `detect-drift.sh` when source files were modified during the session
+- `session-start-loader.sh` — Calls `check-facts.sh` at session start to verify CLAUDE.md accuracy
+
 ## [0.5.0] - 2026-04-02
 
 ### Added
