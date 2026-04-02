@@ -4,6 +4,35 @@ All notable changes to Sentinel will be documented in this file.
 
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.9.0] - 2026-04-02
+
+### Added
+
+- **Progressive disclosure for workflows** — CLAUDE.md templates no longer use `@` prefixes for vault references
+  - Quality files and workflow references use backtick paths instead of `@` paths
+  - Claude reads them on demand via the Read tool, only when the workflow is actually needed
+  - Saves ~27K tokens of eager loading per session for projects with full workflow coverage
+  - Updated all 3 CLAUDE.md templates: `minimal.md`, `standard.md`, `team.md`
+
+- **Self-reducing session-start footprint** — Token-budgeted vault loading with priority ordering
+  - Configurable token budget via `SENTINEL_TOKEN_BUDGET` env var (default: 2,000 tokens ≈ 7,000 chars)
+  - Priority-based loading: open investigations (highest) → relevant gotchas → session recovery → learned patterns → team activity (lowest)
+  - Relevance filtering: gotchas matched against `git diff --name-only HEAD~5` to load only those relevant to recently changed code
+  - Budget reporting: session-start output includes `~N tokens` usage indicator
+  - Sections skipped gracefully when budget is exhausted — no silent truncation
+
+- **Context audit command** (`/sentinel context`) — Measure and optimize total context overhead
+  - Analyzes 7 context sources: CLAUDE.md (base + eager loads), global rules, project rules, MCP tool names, plugin metadata, Sentinel session-start output, vault size
+  - Reports token estimates for each source as percentage of 200K context window
+  - Detects `@` references that could be converted to progressive disclosure
+  - Generates prioritized recommendations: high impact (>1K tokens), medium (200-1K), low (<200)
+  - Identifies unused MCP servers, stale gotchas, unresolved investigations consuming budget
+
+### Changed
+
+- `session-start-loader.sh` — Fully rewritten with token budget system, priority-based loading, and git-diff relevance filtering
+- Command count increased from 9 to 10 (added `/sentinel context`)
+
 ## [0.8.0] - 2026-04-02
 
 ### Added

@@ -2,29 +2,30 @@
 
 {{PROJECT_DESCRIPTION}}
 
-## Quality Standards (auto-loaded)
+## Quality Standards
 
-@vault/quality/anti-patterns.md
-@vault/quality/test-standards.md
-@vault/quality/gates.md
+Read these before declaring work complete:
+- `vault/quality/anti-patterns.md` — 10 banned patterns
+- `vault/quality/test-standards.md` — what constitutes a real test
+- `vault/quality/gates.md` — 7 gates to pass before done
 
-## Workflows -- Read Before Starting Work
+## Workflows — Read the Relevant One Before Starting Work
 
 | Task | Read first |
 |------|-----------|
-| Bug fix | @vault/workflows/bug-fix.md |
-| New feature | @vault/workflows/new-feature.md |
-| Improve existing feature | @vault/workflows/feature-improvement.md |
-| Refactor | @vault/workflows/refactor.md |
-| New API endpoint | @vault/workflows/new-endpoint.md |
-| DB migration | @vault/workflows/database-migration.md |
-| E2E test | @vault/workflows/e2e-test.md |
-| Code review | @vault/workflows/code-review.md |
-| Performance issue | @vault/workflows/performance-investigation.md |
-| Security audit | @vault/workflows/security-audit.md |
-| Dependency update | @vault/workflows/dependency-update.md |
-| Prompt engineering | @vault/workflows/prompt-engineering.md |
-| Research / investigation | @vault/workflows/research-spike.md |
+| Bug fix | `vault/workflows/bug-fix.md` |
+| New feature | `vault/workflows/new-feature.md` |
+| Improve existing feature | `vault/workflows/feature-improvement.md` |
+| Refactor | `vault/workflows/refactor.md` |
+| New API endpoint | `vault/workflows/new-endpoint.md` |
+| DB migration | `vault/workflows/database-migration.md` |
+| E2E test | `vault/workflows/e2e-test.md` |
+| Code review | `vault/workflows/code-review.md` |
+| Performance issue | `vault/workflows/performance-investigation.md` |
+| Security audit | `vault/workflows/security-audit.md` |
+| Dependency update | `vault/workflows/dependency-update.md` |
+| Prompt engineering | `vault/workflows/prompt-engineering.md` |
+| Research / investigation | `vault/workflows/research-spike.md` |
 
 ## Mandatory Behaviors
 
@@ -35,7 +36,7 @@
 
 ### After completing any task
 - **Staleness check:** Scan `vault/gotchas/` and `vault/decisions/` -- delete or update anything now wrong
-- See @vault/workflows/vault-maintenance.md
+- See `vault/workflows/vault-maintenance.md`
 
 ### When ANY test fails
 - **Every failing test is YOUR responsibility.** Never dismiss a test failure as "pre-existing" or "not caused by my changes."

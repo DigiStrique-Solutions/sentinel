@@ -6,8 +6,16 @@
 # - Known gotchas (prevents known mistakes)
 # - Recent session recovery files (enables cross-session continuity)
 #
-# This is the most important hook — it closes the feedback loop between
-# past sessions and the current one.
+# Uses a TOKEN BUDGET to keep output lean. Priority order:
+# 1. Open investigations (highest — prevents repeating failures)
+# 2. Gotchas relevant to recent git changes
+# 3. Session recovery (if recent)
+# 4. Remaining gotchas by recency
+# 5. Learned patterns
+# 6. Team activity (lowest priority)
+#
+# Budget is ~2000 tokens by default (≈7000 chars). Sections are added
+# in priority order and skipped when the budget is exhausted.
 
 set -euo pipefail
 
@@ -22,12 +30,52 @@ if [ ! -d "$VAULT_DIR" ]; then
     exit 0
 fi
 
+# --- Token budget management ---
+# Default budget: ~2000 tokens ≈ 7000 chars (using 3.5 chars/token heuristic)
+TOKEN_BUDGET="${SENTINEL_TOKEN_BUDGET:-2000}"
+CHAR_BUDGET=$(( TOKEN_BUDGET * 35 / 10 ))
+CHARS_USED=0
+
+# Estimate chars of a string
+estimate_chars() {
+    echo -n "$1" | wc -c | tr -d ' '
+}
+
+# Check if adding content would exceed budget
+budget_allows() {
+    local new_chars
+    new_chars=$(estimate_chars "$1")
+    if [ $(( CHARS_USED + new_chars )) -le "$CHAR_BUDGET" ]; then
+        return 0
+    else
+        return 1
+    fi
+}
+
+# Add content to context if budget allows, return 0 if added, 1 if skipped
+add_to_context() {
+    local content="$1"
+    local new_chars
+    new_chars=$(estimate_chars "$content")
+    if [ $(( CHARS_USED + new_chars )) -le "$CHAR_BUDGET" ]; then
+        CONTEXT="${CONTEXT}${content}"
+        CHARS_USED=$(( CHARS_USED + new_chars ))
+        return 0
+    fi
+    return 1
+}
+
 # Build context string to inject into the session
 CONTEXT=""
 
-# --- 1. Load open investigations (most critical) ---
-# These prevent the agent from repeating approaches that already failed
-# in prior sessions.
+# --- Get recently changed directories for relevance filtering ---
+CHANGED_DIRS=""
+if command -v git &>/dev/null && git -C "$CWD" rev-parse --git-dir &>/dev/null 2>&1; then
+    CHANGED_DIRS=$(git -C "$CWD" diff --name-only HEAD~5 2>/dev/null | sed 's|/[^/]*$||' | sort -u || echo "")
+fi
+
+# --- PRIORITY 1: Load open investigations (most critical) ---
+# These prevent the agent from repeating approaches that already failed.
 if [ -d "${VAULT_DIR}/investigations" ]; then
     OPEN_INVESTIGATIONS=""
     for f in "${VAULT_DIR}/investigations"/*.md; do
@@ -44,63 +92,97 @@ if [ -d "${VAULT_DIR}/investigations" ]; then
     done
 
     if [ -n "$OPEN_INVESTIGATIONS" ]; then
-        CONTEXT="${CONTEXT}\n\n## OPEN INVESTIGATIONS (check before attempting fixes)\n${OPEN_INVESTIGATIONS}"
+        SECTION="\n\n## OPEN INVESTIGATIONS (check before attempting fixes)\n${OPEN_INVESTIGATIONS}"
+        add_to_context "$SECTION" || true  # Always try — highest priority
     fi
 
-    # Count resolved investigations without loading them (progressive disclosure)
+    # Count resolved investigations without loading them
     RESOLVED_COUNT=0
     if [ -d "${VAULT_DIR}/investigations/resolved" ]; then
         RESOLVED_COUNT=$(find "${VAULT_DIR}/investigations/resolved" -name "*.md" -type f 2>/dev/null | wc -l | tr -d ' ')
     fi
     if [ "$RESOLVED_COUNT" -gt 0 ]; then
-        CONTEXT="${CONTEXT}\n\n> **${RESOLVED_COUNT} resolved investigations** in \`vault/investigations/resolved/\` — consult when encountering similar problems."
+        add_to_context "\n\n> **${RESOLVED_COUNT} resolved investigations** available in \`vault/investigations/resolved/\` — consult these if you encounter a similar problem area. Do NOT read them all; look up specific ones by keyword when relevant." || true
     fi
 fi
 
-# --- 2. Load gotcha filenames with one-line descriptions ---
-# These are known pitfalls the agent should be aware of before editing code.
+# --- PRIORITY 2: Load gotchas (relevance-filtered) ---
+# First load gotchas relevant to recently changed code, then others if budget allows.
 if [ -d "${VAULT_DIR}/gotchas" ]; then
-    GOTCHAS=""
+    RELEVANT_GOTCHAS=""
+    OTHER_GOTCHAS=""
+
     for f in "${VAULT_DIR}/gotchas"/*.md; do
         [ -f "$f" ] || continue
         FILENAME=$(basename "$f" .md)
-        # Extract first heading as a brief description
         DESC=$(grep -m1 '^#' "$f" 2>/dev/null | sed 's/^#* *//' || echo "")
-        GOTCHAS="${GOTCHAS}\n- **${FILENAME}**: ${DESC}"
+        ENTRY="- **${FILENAME}**: ${DESC}"
+
+        # Check if this gotcha is relevant to recently changed areas
+        IS_RELEVANT=false
+        if [ -n "$CHANGED_DIRS" ]; then
+            # Check if the gotcha file mentions any of the changed directories
+            for dir in $CHANGED_DIRS; do
+                if grep -qi "$(basename "$dir")" "$f" 2>/dev/null; then
+                    IS_RELEVANT=true
+                    break
+                fi
+            done
+        fi
+
+        if [ "$IS_RELEVANT" = "true" ]; then
+            RELEVANT_GOTCHAS="${RELEVANT_GOTCHAS}\n${ENTRY}"
+        else
+            OTHER_GOTCHAS="${OTHER_GOTCHAS}\n${ENTRY}"
+        fi
     done
 
-    if [ -n "$GOTCHAS" ]; then
-        CONTEXT="${CONTEXT}\n\n## KNOWN GOTCHAS (pitfalls to avoid)\n${GOTCHAS}"
+    GOTCHA_SECTION=""
+    if [ -n "$RELEVANT_GOTCHAS" ] || [ -n "$OTHER_GOTCHAS" ]; then
+        GOTCHA_SECTION="\n\n## KNOWN GOTCHAS (pitfalls to avoid)"
+        if [ -n "$RELEVANT_GOTCHAS" ]; then
+            GOTCHA_SECTION="${GOTCHA_SECTION}\n${RELEVANT_GOTCHAS}"
+        fi
+        if [ -n "$OTHER_GOTCHAS" ]; then
+            # Add remaining gotchas only if budget allows
+            COMBINED="${GOTCHA_SECTION}\n${OTHER_GOTCHAS}"
+            if budget_allows "$COMBINED"; then
+                GOTCHA_SECTION="$COMBINED"
+            elif [ -z "$RELEVANT_GOTCHAS" ]; then
+                # No relevant ones and full list doesn't fit — show count
+                OTHER_COUNT=$(echo -e "$OTHER_GOTCHAS" | grep -c '^\-' || echo "0")
+                GOTCHA_SECTION="${GOTCHA_SECTION}\n${OTHER_GOTCHAS}"
+            fi
+            # If relevant ones loaded but others don't fit, just skip others
+        fi
+        add_to_context "$GOTCHA_SECTION" || true
     fi
 fi
 
-# --- 3. Load most recent session recovery file (from last 2 hours) ---
-# Compaction recovery files help the agent resume mid-task after context loss.
+# --- PRIORITY 3: Load session recovery (if recent) ---
 if [ -d "${VAULT_DIR}/session-recovery" ]; then
     RECENT_RECOVERY=$(find "${VAULT_DIR}/session-recovery" -name "20*-*.md" ! -name "summary-*" -mmin -120 -type f 2>/dev/null | sort -r | head -1)
     if [ -n "$RECENT_RECOVERY" ] && [ -f "$RECENT_RECOVERY" ]; then
         RECOVERY_CONTENT=$(head -40 "$RECENT_RECOVERY")
-        CONTEXT="${CONTEXT}\n\n## RECENT SESSION RECOVERY (from compaction)\n${RECOVERY_CONTENT}"
+        add_to_context "\n\n## RECENT SESSION RECOVERY (from compaction)\n${RECOVERY_CONTENT}" || true
     fi
 
-    # Also check for incomplete session summaries (up to 48 hours old)
+    # Check for incomplete session summaries (up to 48 hours old)
     RECENT_SUMMARY=$(find "${VAULT_DIR}/session-recovery" -name "summary-*.md" -mmin -2880 -type f 2>/dev/null | sort -r | head -1)
     if [ -n "$RECENT_SUMMARY" ] && [ -f "$RECENT_SUMMARY" ]; then
         if grep -q "status: incomplete" "$RECENT_SUMMARY" 2>/dev/null; then
             SUMMARY_CONTENT=$(head -40 "$RECENT_SUMMARY")
-            CONTEXT="${CONTEXT}\n\n## PREVIOUS SESSION (incomplete work)\n${SUMMARY_CONTENT}"
+            add_to_context "\n\n## PREVIOUS SESSION CONTEXT (incomplete work from prior session)\n${SUMMARY_CONTENT}" || true
         fi
     fi
 fi
 
-# --- 4. Load high-confidence learned patterns ---
-# Patterns with confidence >= 0.7 are injected as guidance.
+# --- PRIORITY 4: Load high-confidence learned patterns ---
 if [ -d "${VAULT_DIR}/patterns/learned" ]; then
     HIGH_CONF_PATTERNS=""
     for f in "${VAULT_DIR}/patterns/learned/"*.md; do
         [ -f "$f" ] || continue
         CONF=$(grep "^confidence:" "$f" 2>/dev/null | head -1 | awk '{print $2}')
-        # Only load patterns with confidence >= 0.7
         if [ -n "$CONF" ] && [ "$(echo "$CONF >= 0.7" | bc 2>/dev/null || echo 0)" -eq 1 ]; then
             NAME=$(basename "$f" .md)
             TITLE=$(grep -m1 '^# ' "$f" 2>/dev/null | sed 's/^# //')
@@ -109,11 +191,11 @@ if [ -d "${VAULT_DIR}/patterns/learned" ]; then
     done
 
     if [ -n "$HIGH_CONF_PATTERNS" ]; then
-        CONTEXT="${CONTEXT}\n\n## LEARNED PATTERNS (high confidence)\n${HIGH_CONF_PATTERNS}"
+        add_to_context "\n\n## LEARNED PATTERNS (high confidence)\n${HIGH_CONF_PATTERNS}" || true
     fi
 fi
 
-# --- 5. Load recent team activity (last 3 days) ---
+# --- PRIORITY 5: Load recent team activity (lowest priority) ---
 if [ -d "${VAULT_DIR}/activity" ]; then
     ACTIVITY=""
     for i in 0 1 2; do
@@ -124,7 +206,6 @@ if [ -d "${VAULT_DIR}/activity" ]; then
         fi
         ACTIVITY_FILE="${VAULT_DIR}/activity/${DAY}.md"
         if [ -f "$ACTIVITY_FILE" ]; then
-            # Get last 10 entries from each day
             ENTRIES=$(tail -10 "$ACTIVITY_FILE" | grep "^- " || echo "")
             if [ -n "$ENTRIES" ]; then
                 ACTIVITY="${ACTIVITY}\n### ${DAY}\n${ENTRIES}"
@@ -133,11 +214,11 @@ if [ -d "${VAULT_DIR}/activity" ]; then
     done
 
     if [ -n "$ACTIVITY" ]; then
-        CONTEXT="${CONTEXT}\n\n## RECENT TEAM ACTIVITY (last 3 days)\n${ACTIVITY}"
+        add_to_context "\n\n## RECENT TEAM ACTIVITY (last 3 days)\n${ACTIVITY}" || true
     fi
 fi
 
-# --- 6. Team onboarding check ---
+# --- Team onboarding check (tiny — always fits) ---
 MANIFEST_FILE=""
 for candidate in "${CWD}/.claude/shared/manifest.json" "${CWD}/templates/shared/manifest.json"; do
     if [ -f "$candidate" ]; then
@@ -147,27 +228,26 @@ for candidate in "${CWD}/.claude/shared/manifest.json" "${CWD}/templates/shared/
 done
 
 if [ -n "$MANIFEST_FILE" ]; then
-    # Team preset is active — check onboarding status
     GIT_USER=$(git -C "$CWD" config user.name 2>/dev/null || echo "")
     if [ -n "$GIT_USER" ]; then
         ONBOARD_MARKER="${CWD}/.sentinel/onboarded-$(echo "$GIT_USER" | tr ' ' '-' | tr '[:upper:]' '[:lower:]')"
         if [ ! -f "$ONBOARD_MARKER" ]; then
-            CONTEXT="${CONTEXT}\n\n## TEAM ONBOARDING\nTEAM ONBOARDING: You haven't completed team onboarding yet. Run \`/sentinel onboard\` to get set up."
+            add_to_context "\n\n## TEAM ONBOARDING\nYou haven't completed team onboarding yet. Run \`/sentinel onboard\` to get set up." || true
         fi
     fi
 fi
 
-# --- 7. CLAUDE.md fact checking ---
+# --- CLAUDE.md fact checking (runs separately, output is small) ---
 PLUGIN_ROOT="${CLAUDE_PLUGIN_ROOT:-$(cd "$(dirname "$0")/../.." && pwd)}"
 FACTS_SCRIPT="${PLUGIN_ROOT}/scripts/check-facts.sh"
 if [ -x "$FACTS_SCRIPT" ]; then
     FACTS_OUTPUT=$("$FACTS_SCRIPT" "$CWD" 2>/dev/null || echo "")
     if [ -n "$FACTS_OUTPUT" ]; then
-        CONTEXT="${CONTEXT}\n\n## CLAUDE.md FACT CHECK\n${FACTS_OUTPUT}"
+        add_to_context "\n\n## CLAUDE.md FACT CHECK\n${FACTS_OUTPUT}" || true
     fi
 fi
 
-# --- 8. Summary counts ---
+# --- Summary counts ---
 INVESTIGATION_COUNT=0
 GOTCHA_COUNT=0
 if [ -d "${VAULT_DIR}/investigations" ]; then
@@ -177,9 +257,16 @@ if [ -d "${VAULT_DIR}/gotchas" ]; then
     GOTCHA_COUNT=$(find "${VAULT_DIR}/gotchas" -name "*.md" -type f 2>/dev/null | wc -l | tr -d ' ')
 fi
 
+# --- Budget reporting ---
+TOKENS_USED=$(( CHARS_USED * 10 / 35 ))
+BUDGET_NOTE=""
+if [ "$TOKENS_USED" -gt "$TOKEN_BUDGET" ]; then
+    BUDGET_NOTE=" [over budget: ~${TOKENS_USED}/${TOKEN_BUDGET} tokens]"
+fi
+
 # --- Output context for injection into the session ---
 if [ -n "$CONTEXT" ]; then
-    echo -e "VAULT CONTEXT LOADED (${INVESTIGATION_COUNT} investigations, ${GOTCHA_COUNT} gotchas):${CONTEXT}\n\nBefore attempting any fix, CHECK vault/investigations/ for past failed approaches. Before writing code, CHECK vault/gotchas/ for known pitfalls."
+    echo -e "VAULT CONTEXT LOADED (${INVESTIGATION_COUNT} investigations, ${GOTCHA_COUNT} gotchas, ~${TOKENS_USED} tokens):${CONTEXT}\n\nBefore attempting any fix, CHECK vault/investigations/ for past failed approaches. Before writing code, CHECK vault/gotchas/ for known pitfalls."
 fi
 
 exit 0

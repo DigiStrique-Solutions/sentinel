@@ -2,17 +2,18 @@
 
 {{PROJECT_DESCRIPTION}}
 
-## Quality Standards (auto-loaded)
+## Quality Standards
 
-@vault/quality/anti-patterns.md
-@vault/quality/test-standards.md
-@vault/quality/gates.md
+Read these before declaring work complete:
+- `vault/quality/anti-patterns.md` — 10 banned patterns
+- `vault/quality/test-standards.md` — what constitutes a real test
+- `vault/quality/gates.md` — 7 gates to pass before done
 
 ## Workflows
 
 | Task | Read first |
 |------|-----------|
-| Bug fix | @vault/workflows/bug-fix.md |
+| Bug fix | `vault/workflows/bug-fix.md` |
 
 ## Mandatory Behaviors
 

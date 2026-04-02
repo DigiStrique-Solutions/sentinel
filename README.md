@@ -16,6 +16,8 @@ Sentinel is a Claude Code plugin that gives your AI assistant **institutional me
 
 **Loop & Batch Execution** — Some tasks are too large for one context window. `/sentinel loop` runs a task repeatedly until a condition is met (fix all lint errors, get tests passing, tune prompts). `/sentinel batch` breaks a massive task into work items and processes each with isolated sub-agents — generate codemaps for a 500K-line repo, migrate hundreds of files, bulk-add documentation. Both track progress to disk and are resumable.
 
+**Context Optimization** — Sentinel minimizes its own context footprint. Workflow references use progressive disclosure (loaded on demand, not eagerly). The session-start loader operates within a configurable token budget, loading vault entries in priority order and filtering gotchas by relevance to recently changed code. `/sentinel context` audits all context sources (CLAUDE.md, rules, MCP servers, plugins, hooks, vault) with token estimates and actionable recommendations.
+
 **Documentation Drift Detection** — Architecture docs and CLAUDE.md go stale as code changes. Sentinel detects this automatically. At session end, it scans architecture docs for dead file references. At session start, it verifies CLAUDE.md numerical claims against actual counts. Stale docs get flagged so Claude updates them.
 
 **Memory** — A vault system that persists investigations, gotchas, decisions, and patterns across sessions. When a fix attempt fails, it's logged. When a non-obvious constraint is discovered, it's recorded. The next session reads these before starting work.
@@ -147,7 +149,7 @@ Next session starts → better context loaded
 
 Common rules (8) plus language-specific extensions for Python (3) and TypeScript (3).
 
-### Commands (9)
+### Commands (10)
 
 - `/sentinel bootstrap` — Scaffold vault and workflows for a new project
 - `/sentinel health` — Dashboard showing vault health metrics
@@ -158,6 +160,7 @@ Common rules (8) plus language-specific extensions for Python (3) and TypeScript
 - `/sentinel onboard` — Guided team onboarding for new members
 - `/sentinel loop` — Convergence loop: repeat a task until a condition is met (lint cleanup, test fixes, prompt tuning)
 - `/sentinel batch` — Map-reduce: break a huge task into work items, process each with sub-agents (codemap generation, mass migration, bulk docs)
+- `/sentinel context` — Audit all context sources with token estimates and optimization recommendations
 
 ### Workflows (13)
 
