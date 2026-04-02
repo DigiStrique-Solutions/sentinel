@@ -6,31 +6,52 @@ For diagnosing and fixing slow endpoints, slow pages, or high resource usage. Di
 
 **Rule: No optimization without a baseline measurement.**
 
-- [ ] Identify the specific operation that is slow
-- [ ] Measure its current duration/resource usage with a profiler or timing instrumentation
-- [ ] Record the baseline numbers (e.g., "P95 latency: 1200ms")
+### Backend:
+```bash
+# Add timing to the specific function
+import time
+start = time.perf_counter()
+# ... code ...
+duration = time.perf_counter() - start
+logger.info("operation_timing", operation="name", duration_ms=duration * 1000)
+```
 
-### Common measurement approaches:
-- **Backend:** Add timing instrumentation around the suspected code path
-- **Database:** Run `EXPLAIN ANALYZE` on slow queries
-- **Frontend:** Use browser DevTools (Lighthouse, Network waterfall, React Profiler)
-- **API:** Measure time-to-first-byte and total response time
+### Database queries:
+```sql
+-- Check slow queries
+EXPLAIN ANALYZE SELECT ... FROM table WHERE ...;
+
+-- Look for sequential scans on large tables
+SELECT relname, seq_scan, seq_tup_read, idx_scan, idx_tup_fetch
+FROM pg_stat_user_tables
+ORDER BY seq_scan DESC;
+```
+
+### Frontend:
+```bash
+# Bundle size analysis
+npm run build
+# Check bundle analyzer output
+
+# Lighthouse audit (run in browser)
+# Focus on: LCP, FID, CLS, TTFB
+```
 
 ## 2. Identify the Bottleneck
 
-Common patterns:
+### Common patterns:
 
 | Symptom | Likely cause | Investigation |
 |---------|-------------|---------------|
-| Slow API response | N+1 queries, missing index | EXPLAIN ANALYZE, query count |
+| Slow API response | N+1 queries, missing index | `EXPLAIN ANALYZE`, check query count |
 | Slow page load | Large bundle, blocking requests | Bundle analyzer, network waterfall |
 | High memory | Large result sets loaded entirely | Check pagination, streaming |
-| Slow writes | Missing indexes, lock contention | Database lock monitoring |
+| Slow external API | Third-party latency | Measure API call duration |
 
 ## 3. Hypothesize and Validate
 
 - [ ] Form a hypothesis: "The slowness is caused by X because Y"
-- [ ] Write a benchmark or test that measures the specific operation
+- [ ] Write a benchmark test that measures the specific operation
 - [ ] Validate the hypothesis with measurement (not intuition)
 - [ ] If wrong, update `vault/investigations/` and try next hypothesis
 
@@ -42,21 +63,36 @@ Common patterns:
 - [ ] Run full test suite to verify no behavioral regression
 
 ### Common fixes:
-- **Database:** Add missing indexes, replace N+1 with joins, add pagination
-- **Backend:** Cache frequently accessed data, use async I/O, stream results
-- **Frontend:** Lazy load components, memoize computations, virtualize lists
+
+**Database:**
+- Add missing indexes
+- Replace N+1 with joined queries or batch loading
+- Add pagination for large result sets
+- Use eager loading for relationships
+
+**Backend:**
+- Cache frequently accessed, rarely changing data
+- Move heavy computation to background tasks
+- Use async I/O for external API calls
+- Stream results instead of collecting then returning
+
+**Frontend:**
+- Lazy load heavy components (dynamic imports)
+- Memoize expensive computations (`useMemo`, `useCallback`)
+- Virtualize long lists
+- Optimize re-renders (check React DevTools Profiler)
 
 ## 5. Verify
 
 - [ ] Baseline vs. after measurements documented
 - [ ] Tests pass
-- [ ] No behavioral changes (same inputs, same outputs, just faster)
+- [ ] No behavioral changes (performance fix should not change output)
 
 ## 6. Document
 
 - [ ] Log findings in `vault/investigations/` (even if resolved)
-- [ ] If a new performance constraint was discovered, add to `vault/gotchas/`
-- [ ] Include before/after metrics
+- [ ] If a new performance constraint is discovered, add to `vault/gotchas/`
+- [ ] Include before/after metrics in the investigation file
 
 ## Key Rules
 

@@ -4,9 +4,18 @@ Updating packages and external dependencies safely.
 
 ## 1. Audit Current State
 
-- [ ] Run dependency audit tool for known vulnerabilities
-- [ ] Check for outdated packages
-- [ ] List packages to update and classify by risk
+```bash
+# Python
+pip audit                    # Known vulnerabilities
+pip list --outdated          # Available updates
+
+# Node
+npm audit                   # Known vulnerabilities
+npm outdated                # Available updates
+# or
+yarn audit
+yarn outdated
+```
 
 ## 2. Classify Updates
 
@@ -27,18 +36,43 @@ For each dependency:
 - [ ] Run the full test suite for the affected project
 - [ ] If tests fail, check if the failure is due to the update or pre-existing
 
+### Python:
+```bash
+pip install package==new_version
+# Update requirements.txt or pyproject.toml
+pytest tests/ -x
+```
+
+### Node:
+```bash
+npm install package@new_version
+# or
+yarn upgrade package@new_version
+npm test
+npx tsc --noEmit
+```
+
 ## 4. Post-Update Verification
 
 - [ ] All existing tests pass
 - [ ] No new type errors
 - [ ] No new lint warnings
-- [ ] Application starts and runs correctly
-- [ ] Critical user flows still work
+- [ ] Application starts and basic flows work
 
-## 5. Document
+## 5. External API Version Changes
 
-- [ ] If an update introduced a new constraint, add to `vault/gotchas/`
+If an external API you depend on is deprecating a version:
+
+- [ ] Identify which code paths are affected
+- [ ] Check the API migration guide
+- [ ] Update API calls (endpoints, parameters, response parsing)
+- [ ] Update tests with new response shapes
+- [ ] Verify the new API paths work
+
+## 6. Document
+
+- [ ] If an API change introduced a new constraint, add to `vault/gotchas/`
 - [ ] If a major version upgrade required significant changes, add to `vault/decisions/`
-- [ ] Commit with `chore:` prefix for routine updates, `fix:` for security patches
+- [ ] Update `vault/changelog/` with the dependency updates
 
 #workflow #dependencies #update

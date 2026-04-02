@@ -1,22 +1,81 @@
 {
   "hooks": {
     "SessionStart": [
-      { "type": "command", "command": "hooks/engine/session-start-loader.sh", "timeout": 15000 },
-      { "type": "command", "command": "hooks/engine/session-start-index.sh", "timeout": 10000 }
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"${CLAUDE_PLUGIN_ROOT}/hooks/engine/session-start-loader.sh\"",
+            "timeout": 15000
+          },
+          {
+            "type": "command",
+            "command": "\"${CLAUDE_PLUGIN_ROOT}/hooks/engine/session-start-index.sh\"",
+            "timeout": 10000
+          }
+        ]
+      }
     ],
     "PreToolUse": [
-      { "type": "command", "command": "hooks/engine/pre-tool-gotcha.sh", "timeout": 3000, "matcher": "Edit|Write|MultiEdit" },
-      { "type": "command", "command": "hooks/engine/pre-tool-scope.sh", "timeout": 3000, "matcher": "Edit|Write|MultiEdit" }
+      {
+        "matcher": "Edit|Write|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"${CLAUDE_PLUGIN_ROOT}/hooks/engine/pre-tool-gotcha.sh\"",
+            "timeout": 3000
+          },
+          {
+            "type": "command",
+            "command": "\"${CLAUDE_PLUGIN_ROOT}/hooks/engine/pre-tool-scope.sh\"",
+            "timeout": 3000
+          }
+        ]
+      }
     ],
     "PostToolUse": [
-      { "type": "command", "command": "hooks/engine/post-tool-tracker.sh", "timeout": 3000, "matcher": "Edit|Write|MultiEdit" },
-      { "type": "command", "command": "hooks/engine/post-tool-test-watch.sh", "timeout": 5000, "matcher": "Bash" }
+      {
+        "matcher": "Edit|Write|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"${CLAUDE_PLUGIN_ROOT}/hooks/engine/post-tool-tracker.sh\"",
+            "timeout": 3000
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"${CLAUDE_PLUGIN_ROOT}/hooks/engine/post-tool-test-watch.sh\"",
+            "timeout": 5000
+          }
+        ]
+      }
     ],
     "PreCompact": [
-      { "type": "command", "command": "hooks/engine/pre-compact-save.sh", "timeout": 15000 }
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"${CLAUDE_PLUGIN_ROOT}/hooks/engine/pre-compact-save.sh\"",
+            "timeout": 15000
+          }
+        ]
+      }
     ],
     "Stop": [
-      { "type": "command", "command": "hooks/engine/stop-enforcer.sh", "timeout": 10000 }
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"${CLAUDE_PLUGIN_ROOT}/hooks/engine/stop-enforcer.sh\"",
+            "timeout": 10000
+          }
+        ]
+      }
     ]
   }
 }

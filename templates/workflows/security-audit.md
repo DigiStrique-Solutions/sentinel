@@ -9,12 +9,13 @@ Proactive security review of a module, feature, or the full application.
 - New user input handling (forms, file uploads, query parameters)
 - New database queries (injection risk)
 - Before a major release
+- After a security incident
 
 ## 1. Scope
 
 - [ ] Identify the module/feature to audit
 - [ ] Read the relevant architecture files in `vault/architecture/`
-- [ ] Check `vault/gotchas/` for known security constraints
+- [ ] Check `vault/gotchas/` for known security constraints in this area
 - [ ] List all entry points (API endpoints, form handlers, webhook receivers)
 
 ## 2. OWASP Top 10 Checklist
@@ -26,31 +27,32 @@ Proactive security review of a module, feature, or the full application.
 
 ### A02: Cryptographic Failures
 - [ ] No secrets in source code (API keys, tokens, passwords)
-- [ ] Tokens stored securely
+- [ ] Tokens stored securely (not in localStorage for sensitive tokens)
 - [ ] HTTPS enforced for all external API calls
 
 ### A03: Injection
-- [ ] All SQL queries use parameterized queries
+- [ ] All SQL queries use parameterized queries (ORM or prepared statements)
 - [ ] No string interpolation in queries
 - [ ] User input sanitized before HTML rendering (XSS prevention)
-- [ ] No shell command injection
+- [ ] No shell command injection (no `os.system()` or `subprocess` with user input)
 
 ### A04: Insecure Design
-- [ ] Rate limiting on public endpoints
-- [ ] Error messages don't leak internal details
-- [ ] Fail securely (deny by default)
+- [ ] Rate limiting on all public endpoints
+- [ ] Error messages don't leak internal details (stack traces, DB schema, file paths)
+- [ ] Fail securely (deny by default, not allow by default)
 
 ### A05: Security Misconfiguration
-- [ ] Security headers configured (CSP, CORS, etc.)
+- [ ] CSP headers configured if serving HTML
+- [ ] CORS configured correctly (not `*` in production)
 - [ ] Debug mode disabled in production
 - [ ] Default credentials changed
 
 ### A06: Vulnerable Components
-- [ ] Dependency audit shows no critical vulnerabilities
+- [ ] `pip audit` / `npm audit` / `yarn audit` show no critical vulnerabilities
 - [ ] Dependencies are reasonably up to date
 
 ### A07: Authentication Failures
-- [ ] Auth properly integrated
+- [ ] Auth properly integrated and tested
 - [ ] OAuth flows follow platform best practices
 - [ ] Token refresh handles expiry correctly
 
@@ -59,22 +61,38 @@ Proactive security review of a module, feature, or the full application.
 - [ ] No deserialization of untrusted data without schema validation
 
 ### A09: Logging & Monitoring
-- [ ] Security events logged (failed auth, permission denied)
+- [ ] Security events logged (failed auth, permission denied, unusual access patterns)
 - [ ] Logs don't contain secrets or PII
-- [ ] Error logs are structured
+- [ ] Error logs are structured (structured logging, not print)
 
 ### A10: SSRF
 - [ ] No user-controlled URLs used in server-side HTTP requests without validation
+- [ ] Webhook URLs validated against allowlist
 
 ## 3. Automated Scanning
 
-- [ ] Run dependency audit tool (`pip audit`, `yarn audit`, `cargo audit`, etc.)
-- [ ] Search for common dangerous patterns in the codebase
-- [ ] Address all critical findings immediately
+```bash
+# Python dependency audit
+pip audit
+
+# Node dependency audit
+npm audit
+# or
+yarn audit
+
+# Search for common dangerous patterns
+grep -r "os.system\|subprocess.call\|eval(" src/
+grep -r "dangerouslySetInnerHTML" src/
+```
+
+- [ ] Address all CRITICAL findings immediately
+- [ ] Address HIGH findings before shipping
+- [ ] Document MEDIUM/LOW findings for future cleanup
 
 ## 4. Document
 
 - [ ] Log findings in `vault/investigations/` if vulnerabilities found
 - [ ] Add new security constraints to `vault/gotchas/`
+- [ ] Update `vault/changelog/` with security fixes
 
 #workflow #security #audit
