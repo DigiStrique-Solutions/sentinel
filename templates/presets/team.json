@@ -1,0 +1,56 @@
+{
+  "name": "team",
+  "description": "Full vault with team sync and onboarding. Best for teams.",
+  "extends": "standard",
+  "vault_dirs": [
+    "investigations",
+    "investigations/resolved",
+    "gotchas",
+    "decisions",
+    "workflows",
+    "patterns",
+    "patterns/learned",
+    "architecture",
+    "changelog",
+    "session-recovery",
+    "context",
+    "quality",
+    "completed",
+    "planning",
+    "scripts",
+    "evals",
+    "design"
+  ],
+  "templates": [
+    "investigations/_template.md",
+    "decisions/_template.md",
+    "gotchas/_example.md",
+    "quality/anti-patterns.md",
+    "quality/test-standards.md",
+    "quality/gates.md"
+  ],
+  "workflows": [
+    "bug-fix.md",
+    "new-feature.md",
+    "feature-improvement.md",
+    "refactor.md",
+    "new-endpoint.md",
+    "database-migration.md",
+    "e2e-test.md",
+    "code-review.md",
+    "performance-investigation.md",
+    "security-audit.md",
+    "dependency-update.md",
+    "prompt-engineering.md",
+    "research-spike.md"
+  ],
+  "shared": [
+    "shared/manifest.json",
+    "shared/settings-template.json"
+  ],
+  "additional_dirs": [
+    ".claude/shared/agents",
+    ".claude/shared/rules"
+  ],
+  "claude_md": "team.md"
+}

@@ -1,0 +1,17 @@
+{
+  "version": "1.0",
+  "team": "<team-name>",
+  "sync": {
+    "agents": true,
+    "rules": true,
+    "hooks": true,
+    "skills": true
+  },
+  "onboarding": {
+    "required_vault_read": [
+      "quality/gates.md",
+      "quality/anti-patterns.md"
+    ],
+    "first_task_workflow": "bug-fix"
+  }
+}

@@ -1,0 +1,24 @@
+{
+  "name": "minimal",
+  "description": "Vault skeleton + bug-fix workflow + quality gates",
+  "vault_dirs": [
+    "investigations",
+    "investigations/resolved",
+    "gotchas",
+    "decisions",
+    "workflows",
+    "quality",
+    "changelog"
+  ],
+  "templates": [
+    "investigations/_template.md",
+    "decisions/_template.md",
+    "quality/anti-patterns.md",
+    "quality/test-standards.md",
+    "quality/gates.md"
+  ],
+  "workflows": [
+    "bug-fix.md"
+  ],
+  "claude_md": "minimal.md"
+}

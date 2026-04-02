@@ -1,0 +1,11 @@
+{
+  "name": "sentinel",
+  "version": "0.1.0",
+  "description": "Self-improving development methodology for Claude Code",
+  "author": "Poojan Ajani",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/strique-io/sentinel.git"
+  }
+}

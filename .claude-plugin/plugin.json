@@ -1,0 +1,21 @@
+{
+  "name": "sentinel",
+  "version": "0.1.0",
+  "description": "Self-improving development methodology for Claude Code. Institutional memory, quality enforcement, and continuous learning.",
+  "author": "Poojan Ajani",
+  "marketplace": "strique-marketplace",
+  "homepage": "https://github.com/strique-io/sentinel",
+  "license": "MIT",
+  "keywords": [
+    "vault",
+    "quality-gates",
+    "tdd",
+    "investigations",
+    "workflows",
+    "hooks",
+    "methodology"
+  ],
+  "claude_code": {
+    "min_version": "1.0.0"
+  }
+}
