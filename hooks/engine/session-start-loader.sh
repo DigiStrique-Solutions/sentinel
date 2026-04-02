@@ -150,9 +150,9 @@ if [ -d "${VAULT_DIR}/gotchas" ]; then
             if budget_allows "$COMBINED"; then
                 GOTCHA_SECTION="$COMBINED"
             elif [ -z "$RELEVANT_GOTCHAS" ]; then
-                # No relevant ones and full list doesn't fit — show count
+                # No relevant ones and full list doesn't fit — show count only
                 OTHER_COUNT=$(echo -e "$OTHER_GOTCHAS" | grep -c '^\-' || echo "0")
-                GOTCHA_SECTION="${GOTCHA_SECTION}\n${OTHER_GOTCHAS}"
+                GOTCHA_SECTION="${GOTCHA_SECTION}\n> ${OTHER_COUNT} gotchas available in \`vault/gotchas/\` — consult when working in unfamiliar areas."
             fi
             # If relevant ones loaded but others don't fit, just skip others
         fi
@@ -184,7 +184,8 @@ if [ -d "${VAULT_DIR}/patterns/learned" ]; then
     for f in "${VAULT_DIR}/patterns/learned/"*.md; do
         [ -f "$f" ] || continue
         CONF=$(grep "^confidence:" "$f" 2>/dev/null | head -1 | awk '{print $2}')
-        if [ -n "$CONF" ] && awk "BEGIN {if ($CONF >= 0.7) exit 0; else exit 1}" 2>/dev/null; then
+        # Guard: skip if CONF is empty or non-numeric (awk would get a syntax error)
+        if [ -n "$CONF" ] && echo "$CONF" | grep -qE '^[0-9]+\.?[0-9]*$' && awk "BEGIN {if ($CONF >= 0.7) exit 0; else exit 1}" 2>/dev/null; then
             NAME=$(basename "$f" .md)
             TITLE=$(grep -m1 '^# ' "$f" 2>/dev/null | sed 's/^# //')
             HIGH_CONF_PATTERNS="${HIGH_CONF_PATTERNS}\n- **${NAME}**: ${TITLE} (confidence: ${CONF})"
