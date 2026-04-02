@@ -4,6 +4,30 @@ All notable changes to Sentinel will be documented in this file.
 
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.0] - 2026-04-02
+
+### Added
+
+- **Loop execution** (`/sentinel loop`) — Convergence loop for repetitive fix tasks
+  - Repeats a task until a completion condition is mechanically verified
+  - Detects stalls: stops after 2 iterations with no progress (prevents grinding through identical failures)
+  - State file at `.sentinel/loop/state.json` tracks every attempt with results and summaries
+  - Resumable: `/sentinel loop --resume` continues from where it left off after timeout or session restart
+  - Use cases: lint cleanup, test fixes, prompt tuning, coverage improvement
+
+- **Batch execution** (`/sentinel batch`) — Map-reduce for tasks too large for one context window
+  - Discovers work items via glob pattern, processes each with isolated sub-agents
+  - Each sub-agent gets its own context window — no context exhaustion on large codebases
+  - State file at `.sentinel/batch/<id>/state.json` checkpoints after every item
+  - Resumable: `/sentinel batch --resume` continues from last checkpoint, `--retry-failed` retries errors
+  - Parallel mode: up to 5 concurrent sub-agents via `--parallel N`
+  - Generates INDEX.md with results summary and per-file links
+  - Use cases: codemap generation for 500K+ line repos, mass migration, bulk documentation, test stub generation
+
+### Changed
+
+- Command count increased from 7 to 9 (added `/sentinel loop` and `/sentinel batch`)
+
 ## [0.7.0] - 2026-04-02
 
 ### Added

@@ -14,6 +14,8 @@ Sentinel is a Claude Code plugin that gives your AI assistant **institutional me
 
 **Verification, Not Trust** — Claude can claim "tests pass" without running them, or say "all done" with tasks still pending. Sentinel catches both. An evidence log records every test/lint/build command with its actual exit status — Claude can't retroactively claim success. A todo mirror tracks task state independently — if tasks are incomplete at session end, they're listed. The stop hook audits evidence against what should have happened: "5 Python files modified, 0 test executions found."
 
+**Loop & Batch Execution** — Some tasks are too large for one context window. `/sentinel loop` runs a task repeatedly until a condition is met (fix all lint errors, get tests passing, tune prompts). `/sentinel batch` breaks a massive task into work items and processes each with isolated sub-agents — generate codemaps for a 500K-line repo, migrate hundreds of files, bulk-add documentation. Both track progress to disk and are resumable.
+
 **Documentation Drift Detection** — Architecture docs and CLAUDE.md go stale as code changes. Sentinel detects this automatically. At session end, it scans architecture docs for dead file references. At session start, it verifies CLAUDE.md numerical claims against actual counts. Stale docs get flagged so Claude updates them.
 
 **Memory** — A vault system that persists investigations, gotchas, decisions, and patterns across sessions. When a fix attempt fails, it's logged. When a non-obvious constraint is discovered, it's recorded. The next session reads these before starting work.
@@ -145,7 +147,7 @@ Next session starts → better context loaded
 
 Common rules (8) plus language-specific extensions for Python (3) and TypeScript (3).
 
-### Commands (7)
+### Commands (9)
 
 - `/sentinel bootstrap` — Scaffold vault and workflows for a new project
 - `/sentinel health` — Dashboard showing vault health metrics
@@ -154,6 +156,8 @@ Common rules (8) plus language-specific extensions for Python (3) and TypeScript
 - `/sentinel eject` — Export all Sentinel content to standalone files
 - `/sentinel config` — View and modify Sentinel settings
 - `/sentinel onboard` — Guided team onboarding for new members
+- `/sentinel loop` — Convergence loop: repeat a task until a condition is met (lint cleanup, test fixes, prompt tuning)
+- `/sentinel batch` — Map-reduce: break a huge task into work items, process each with sub-agents (codemap generation, mass migration, bulk docs)
 
 ### Workflows (13)
 
