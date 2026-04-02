@@ -14,7 +14,7 @@
 # 5. Learned patterns
 # 6. Team activity (lowest priority)
 #
-# Budget is ~2000 tokens by default (≈7000 chars). Sections are added
+# Budget is ~10000 tokens by default (≈35000 chars). Sections are added
 # in priority order and skipped when the budget is exhausted.
 
 set -euo pipefail

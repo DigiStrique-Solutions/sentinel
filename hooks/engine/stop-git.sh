@@ -31,18 +31,18 @@ if git -C "$CWD" diff --quiet HEAD 2>/dev/null && git -C "$CWD" diff --cached --
 fi
 
 # --- Build .gitignore-safe staging ---
-# Never commit these patterns
-EXCLUDE_PATTERNS=(.env .env.* *.pem *.key credentials.json secrets.* .sentinel/)
+# Stage everything EXCEPT sensitive files in a single atomic operation.
+# Using pathspec negation avoids the race where git add -A stages a
+# sensitive file that a subsequent git reset would need to unstage.
 
 cd "$CWD"
 
-# Stage everything except excluded patterns
-git add -A 2>/dev/null || true
-
-# Unstage sensitive files
-for pattern in "${EXCLUDE_PATTERNS[@]}"; do
-    git reset HEAD -- "$pattern" 2>/dev/null || true
-done
+git add -A -- \
+    ':!.env' ':!.env.*' \
+    ':!*.pem' ':!*.key' \
+    ':!credentials.json' ':!secrets.*' \
+    ':!.sentinel/' \
+    2>/dev/null || true
 
 # Check if anything is actually staged after filtering
 if git diff --cached --quiet 2>/dev/null; then
