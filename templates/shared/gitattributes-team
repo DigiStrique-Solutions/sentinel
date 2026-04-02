@@ -1,0 +1,6 @@
+# Sentinel vault merge driver — concatenates both sides on conflict
+# instead of producing git merge conflict markers.
+#
+# Setup: git config merge.sentinel-vault.driver "$(git rev-parse --show-toplevel)/scripts/vault-merge-driver.sh %O %A %B"
+#
+vault/**/*.md merge=sentinel-vault

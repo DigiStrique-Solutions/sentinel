@@ -45,6 +45,13 @@ if [ "$CURRENT_BRANCH" = "main" ] || [ "$CURRENT_BRANCH" = "master" ] || [ -z "$
 
     git -C "$CWD" checkout -b "$NEW_BRANCH" --quiet 2>/dev/null
 
+    # Log branch creation to activity feed
+    PLUGIN_LOGGER="$(dirname "$0")/activity-logger.sh"
+    if [ -f "$PLUGIN_LOGGER" ]; then
+        REPO_ROOT="$REPO_ROOT" source "$PLUGIN_LOGGER"
+        log_activity "Created branch \`${NEW_BRANCH}\`"
+    fi
+
     echo "GIT AUTOPILOT: Created branch '${NEW_BRANCH}' — your work is isolated from main. Commits will happen automatically when you're done."
 else
     echo "GIT AUTOPILOT: Working on branch '${CURRENT_BRANCH}'. Commits will happen automatically when you're done."

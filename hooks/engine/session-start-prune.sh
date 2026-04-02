@@ -115,7 +115,17 @@ if [ -d "${VAULT_DIR}/decisions" ]; then
     done
 fi
 
-# --- 1e. Empty directories (cleanup) ---
+# --- 1e. Activity feed files >30 days old ---
+if [ -d "${VAULT_DIR}/activity" ]; then
+    find "${VAULT_DIR}/activity" -name "*.md" -type f 2>/dev/null | while read -r file; do
+        age=$(file_age_days "$file")
+        if [ "$age" -gt 30 ]; then
+            archive_file "$file"
+        fi
+    done
+fi
+
+# --- 1f. Empty directories (cleanup) ---
 find "$VAULT_DIR" -type d -empty -not -path "${ARCHIVE_DIR}/*" -not -path "$VAULT_DIR" -delete 2>/dev/null || true
 
 # ============================================================

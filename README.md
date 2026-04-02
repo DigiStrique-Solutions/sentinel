@@ -10,6 +10,8 @@ Sentinel is a Claude Code plugin that gives your AI assistant **institutional me
 
 **Concurrent Session Isolation** — Run multiple Claude Code agents on the same repo simultaneously. Sentinel detects concurrent sessions, auto-creates git worktrees for isolation, and auto-merges changes back when sessions end. No conflicts, no coordination needed.
 
+**Team Collaboration** — Multiple developers share vault knowledge through git. A custom merge driver prevents conflicts on vault files. A daily activity feed logs what each team member's sessions did. New members get guided onboarding via `/sentinel onboard`.
+
 **Memory** — A vault system that persists investigations, gotchas, decisions, and patterns across sessions. When a fix attempt fails, it's logged. When a non-obvious constraint is discovered, it's recorded. The next session reads these before starting work.
 
 **Discipline** — Hooks that enforce quality gates, TDD workflow, and code review standards automatically. A stop hook verifies all gates pass before work is declared complete. Pre-tool hooks surface relevant gotchas before you repeat a known mistake.
@@ -137,7 +139,7 @@ Next session starts → better context loaded
 
 Common rules (8) plus language-specific extensions for Python (3) and TypeScript (3).
 
-### Commands (6)
+### Commands (7)
 
 - `/sentinel bootstrap` — Scaffold vault and workflows for a new project
 - `/sentinel health` — Dashboard showing vault health metrics
@@ -145,6 +147,7 @@ Common rules (8) plus language-specific extensions for Python (3) and TypeScript
 - `/sentinel prune` — Deep vault cleanup (duplicates, dead refs, archive management)
 - `/sentinel eject` — Export all Sentinel content to standalone files
 - `/sentinel config` — View and modify Sentinel settings
+- `/sentinel onboard` — Guided team onboarding for new members
 
 ### Workflows (13)
 

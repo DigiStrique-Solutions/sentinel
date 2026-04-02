@@ -41,6 +41,42 @@ sort -u "$TRACKER_FILE" -o "$TRACKER_FILE"
 VAULT_DIR="${CWD}/vault"
 if [ -d "$VAULT_DIR" ] && echo "$FILE_PATH" | grep -q "vault/"; then
     touch "${VAULT_DIR}/.index-stale" 2>/dev/null || true
+
+    # --- Activity feed logging for vault events ---
+    REPO_ROOT=$(git -C "$CWD" rev-parse --show-toplevel 2>/dev/null || echo "$CWD")
+    LOGGER="${REPO_ROOT}/.sentinel/activity-logger.sh"
+    # Source the activity logger from the plugin if available
+    PLUGIN_LOGGER=""
+    for candidate in \
+        "$(dirname "$(dirname "$(readlink -f "$0" 2>/dev/null || echo "$0")")")/engine/activity-logger.sh" \
+        "$(dirname "$0")/activity-logger.sh"; do
+        if [ -f "$candidate" ]; then
+            PLUGIN_LOGGER="$candidate"
+            break
+        fi
+    done
+
+    if [ -n "$PLUGIN_LOGGER" ]; then
+        REPO_ROOT="$REPO_ROOT" source "$PLUGIN_LOGGER"
+
+        REL_PATH="${FILE_PATH#${REPO_ROOT}/}"
+
+        if echo "$FILE_PATH" | grep -q "vault/gotchas/"; then
+            SLUG=$(basename "$FILE_PATH" .md)
+            log_activity "Discovered gotcha: \`${SLUG}\` (${REL_PATH})"
+        elif echo "$FILE_PATH" | grep -q "vault/investigations/"; then
+            SLUG=$(basename "$FILE_PATH" .md)
+            # Check if it's being resolved
+            if grep -qi "status:.*resolved" "$FILE_PATH" 2>/dev/null; then
+                log_activity "Resolved investigation: \`${SLUG}\`"
+            else
+                log_activity "Updated investigation: \`${SLUG}\` (${REL_PATH})"
+            fi
+        elif echo "$FILE_PATH" | grep -q "vault/decisions/"; then
+            SLUG=$(basename "$FILE_PATH" .md)
+            log_activity "Added decision: \`${SLUG}\` (${REL_PATH})"
+        fi
+    fi
 fi
 
 exit 0

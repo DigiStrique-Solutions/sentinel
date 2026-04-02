@@ -94,6 +94,12 @@ else
 
     # Attempt merge
     if git merge "$WORKTREE_BRANCH" --no-edit --quiet 2>/dev/null; then
+        # Log merge to activity feed
+        PLUGIN_LOGGER="$(dirname "$0")/activity-logger.sh"
+        if [ -f "$PLUGIN_LOGGER" ]; then
+            REPO_ROOT="$REPO_ROOT" source "$PLUGIN_LOGGER"
+            log_activity "Merged ${COMMITS_AHEAD} commit(s) from worktree \`${WORKTREE_BRANCH}\` into \`${BASE_BRANCH}\`"
+        fi
         echo "SENTINEL: Merged ${COMMITS_AHEAD} commit(s) from worktree into '${BASE_BRANCH}'."
     else
         # Conflict detected — handle vault files specially

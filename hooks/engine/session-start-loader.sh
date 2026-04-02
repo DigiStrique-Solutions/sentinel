@@ -113,7 +113,51 @@ if [ -d "${VAULT_DIR}/patterns/learned" ]; then
     fi
 fi
 
-# --- 5. Summary counts ---
+# --- 5. Load recent team activity (last 3 days) ---
+if [ -d "${VAULT_DIR}/activity" ]; then
+    ACTIVITY=""
+    for i in 0 1 2; do
+        if [[ "$OSTYPE" == "darwin"* ]]; then
+            DAY=$(date -v-${i}d +%Y-%m-%d)
+        else
+            DAY=$(date -d "-${i} days" +%Y-%m-%d)
+        fi
+        ACTIVITY_FILE="${VAULT_DIR}/activity/${DAY}.md"
+        if [ -f "$ACTIVITY_FILE" ]; then
+            # Get last 10 entries from each day
+            ENTRIES=$(tail -10 "$ACTIVITY_FILE" | grep "^- " || echo "")
+            if [ -n "$ENTRIES" ]; then
+                ACTIVITY="${ACTIVITY}\n### ${DAY}\n${ENTRIES}"
+            fi
+        fi
+    done
+
+    if [ -n "$ACTIVITY" ]; then
+        CONTEXT="${CONTEXT}\n\n## RECENT TEAM ACTIVITY (last 3 days)\n${ACTIVITY}"
+    fi
+fi
+
+# --- 6. Team onboarding check ---
+MANIFEST_FILE=""
+for candidate in "${CWD}/.claude/shared/manifest.json" "${CWD}/templates/shared/manifest.json"; do
+    if [ -f "$candidate" ]; then
+        MANIFEST_FILE="$candidate"
+        break
+    fi
+done
+
+if [ -n "$MANIFEST_FILE" ]; then
+    # Team preset is active — check onboarding status
+    GIT_USER=$(git -C "$CWD" config user.name 2>/dev/null || echo "")
+    if [ -n "$GIT_USER" ]; then
+        ONBOARD_MARKER="${CWD}/.sentinel/onboarded-$(echo "$GIT_USER" | tr ' ' '-' | tr '[:upper:]' '[:lower:]')"
+        if [ ! -f "$ONBOARD_MARKER" ]; then
+            CONTEXT="${CONTEXT}\n\n## TEAM ONBOARDING\nTEAM ONBOARDING: You haven't completed team onboarding yet. Run \`/sentinel onboard\` to get set up."
+        fi
+    fi
+fi
+
+# --- 7. Summary counts ---
 INVESTIGATION_COUNT=0
 GOTCHA_COUNT=0
 if [ -d "${VAULT_DIR}/investigations" ]; then

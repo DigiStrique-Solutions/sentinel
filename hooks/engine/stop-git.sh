@@ -87,6 +87,13 @@ git commit -m "$COMMIT_MSG" --quiet 2>/dev/null
 BRANCH=$(git branch --show-current 2>/dev/null || echo "unknown")
 SHORT_SHA=$(git rev-parse --short HEAD 2>/dev/null || echo "")
 
+# Log commit to activity feed
+PLUGIN_LOGGER="$(dirname "$0")/activity-logger.sh"
+if [ -f "$PLUGIN_LOGGER" ]; then
+    REPO_ROOT="$CWD" source "$PLUGIN_LOGGER"
+    log_activity "Committed ${FILE_COUNT} file(s) to \`${BRANCH}\` [${SHORT_SHA}] — ${COMMIT_MSG}"
+fi
+
 echo "GIT AUTOPILOT: Committed ${FILE_COUNT} file(s) to '${BRANCH}' [${SHORT_SHA}] — ${COMMIT_MSG}"
 
 exit 0

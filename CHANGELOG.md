@@ -4,6 +4,39 @@ All notable changes to Sentinel will be documented in this file.
 
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.0] - 2026-04-02
+
+### Added
+
+- **Team collaboration** — Three features for multi-developer vault sharing
+  - **Vault conflict resolution** — Two-layer defense against merge conflicts
+    - One-file-per-entry naming conventions enforced in all hooks (eliminates 90% of conflicts)
+    - Custom git merge driver (`scripts/vault-merge-driver.sh`) concatenates both sides on conflict
+    - `.gitattributes` template for vault files (`vault/**/*.md merge=sentinel-vault`)
+    - Merge markers (`<!-- MERGE: review needed -->`) flag combined content for human review
+  - **Team activity feed** — Daily markdown files at `vault/activity/YYYY-MM-DD.md`
+    - Events logged: gotcha discovered, investigation opened/resolved, decision added, commits, branch creation, worktree merges, quality gate failures
+    - Attribution via `git config user.name` — zero extra setup
+    - Shared `activity-logger.sh` function sourced by all hooks
+    - Session-start loader reads last 3 days of activity for team context
+    - Auto-pruned: activity files >30 days archived by Tier 1 pruning
+  - **Team onboarding** — Guided setup for new team members
+    - `/sentinel onboard` command: reads required vault files, shows recent activity, configures settings, sets up merge driver, suggests first task, marks onboarded
+    - Passive hook detection: `session-start-loader` nudges un-onboarded members with a one-line reminder each session
+    - Non-Claude-Code users get plain text setup instructions
+
+### Changed
+
+- `post-tool-tracker.sh` — Logs vault events (gotchas, investigations, decisions) to activity feed
+- `stop-git.sh` — Logs commits to activity feed
+- `stop-merge.sh` — Logs worktree merges to activity feed
+- `stop-enforcer.sh` — Logs quality gate warnings to activity feed
+- `session-start-git.sh` — Logs branch creation to activity feed
+- `session-start-loader.sh` — Loads recent team activity + checks onboarding status
+- `session-start-prune.sh` — Archives activity files >30 days old (Tier 1)
+- `commands/bootstrap.md` — Team preset creates activity dir, copies merge driver, configures .gitattributes
+- Command count increased from 6 to 7 (added `/sentinel onboard`)
+
 ## [0.4.0] - 2026-04-02
 
 ### Added

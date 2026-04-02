@@ -56,6 +56,19 @@ For each workflow listed in the preset's `workflows` array:
 
 For team preset, also copy files from `additional_templates`.
 
+## Step 5b: Team Preset — Additional Setup
+
+If the team preset was selected, perform these additional steps:
+
+1. **Create activity directory**: Create `vault/activity/` for the team activity feed
+2. **Copy .gitattributes**: Copy `templates/shared/gitattributes-team` to the project root as `.gitattributes` (or append to existing `.gitattributes`)
+3. **Configure merge driver**: Output the merge driver setup command:
+   ```
+   git config merge.sentinel-vault.driver "$(git rev-parse --show-toplevel)/scripts/vault-merge-driver.sh %O %A %B"
+   ```
+   Also copy `scripts/vault-merge-driver.sh` from the plugin to the project's `scripts/` directory and make it executable.
+4. **Copy team manifest**: Copy `templates/shared/manifest.json` to `.claude/shared/manifest.json` if it doesn't exist
+
 ## Step 6: Create CLAUDE.md Skeleton
 
 Read the CLAUDE.md template from `templates/claude-md/{preset.claude_md}`.
@@ -138,4 +151,11 @@ Next steps:
 2. Review vault/quality/gates.md — these gates are checked before every task completion
 3. Read vault/workflows/bug-fix.md to see the investigation protocol in action
 4. Commit the vault/ directory to version control
+```
+
+For the **team** preset, add:
+```
+5. Run `/sentinel onboard` to complete team onboarding
+6. Ask team members to run `/sentinel onboard` after installing Sentinel
+7. Run `/sentinel doctor` to verify merge driver configuration
 ```

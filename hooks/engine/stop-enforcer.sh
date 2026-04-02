@@ -111,6 +111,15 @@ fi
 
 # --- Output warnings ---
 if [ -n "$WARNINGS" ]; then
+    # Log quality gate warnings to activity feed
+    PLUGIN_LOGGER="$(dirname "$0")/activity-logger.sh"
+    if [ -f "$PLUGIN_LOGGER" ]; then
+        REPO_ROOT="$CWD" source "$PLUGIN_LOGGER"
+        # Count the number of warnings
+        WARN_COUNT=$(echo -e "$WARNINGS" | grep -c '^\- \[' 2>/dev/null || echo "0")
+        log_activity "Quality gate warnings: ${WARN_COUNT} issue(s) flagged at session end"
+    fi
+
     echo -e "VAULT MAINTENANCE CHECKLIST -- please address before stopping:\n${WARNINGS}"
 fi
 
