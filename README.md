@@ -6,6 +6,8 @@ Sentinel is a Claude Code plugin that gives your AI assistant **institutional me
 
 ## What It Does
 
+**Git Autopilot** — You never touch git. Sentinel auto-creates branches when sessions start and auto-commits when they end. No branch management, no commit messages, no git knowledge required.
+
 **Memory** — A vault system that persists investigations, gotchas, decisions, and patterns across sessions. When a fix attempt fails, it's logged. When a non-obvious constraint is discovered, it's recorded. The next session reads these before starting work.
 
 **Discipline** — Hooks that enforce quality gates, TDD workflow, and code review standards automatically. A stop hook verifies all gates pass before work is declared complete. Pre-tool hooks surface relevant gotchas before you repeat a known mistake.
@@ -86,9 +88,10 @@ Next session starts → better context loaded
 
 ## What's Included
 
-### Hooks (12)
+### Hooks (14)
 
-**Core (8):**
+**Core (10):**
+- `session-start-git` — Auto-creates branch if on main/master (Git Autopilot)
 - `session-start-loader` — Loads vault context (investigations, gotchas, recovery)
 - `session-start-index` — Builds searchable vault index
 - `pre-tool-gotcha` — Surfaces relevant gotchas before tool execution
@@ -97,6 +100,7 @@ Next session starts → better context loaded
 - `post-tool-test-watch` — Reminds to run tests after code changes
 - `pre-compact-save` — Saves session context before compaction
 - `stop-enforcer` — Enforces quality gates at session end
+- `stop-git` — Auto-commits all changes with conventional message (Git Autopilot)
 
 **Optional (4):**
 - `stop-pattern-extractor` — Extracts reusable patterns from session
@@ -167,13 +171,16 @@ Or edit the generated `.sentinel.json` in your project root.
 4. **Heal the vault.** Every session should leave the vault more accurate than it found it.
 5. **Ship, then improve.** Don't design for hypothetical futures. Build what's needed now.
 
+## Changelog
+
+See [CHANGELOG.md](CHANGELOG.md) for version history.
+
 ## Contributing
 
 ```bash
-git clone https://github.com/strique-io/sentinel.git
+git clone https://github.com/DigiStrique-Solutions/sentinel.git
 cd sentinel
-# Make changes
-# Test by linking locally: claude plugin link .
+# Make changes, validate with: claude plugin validate .
 ```
 
 ## License
