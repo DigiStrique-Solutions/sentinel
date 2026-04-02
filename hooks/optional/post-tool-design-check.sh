@@ -9,6 +9,16 @@ set -euo pipefail
 
 INPUT=$(cat)
 
+# Check if this optional hook is enabled via config
+CWD=$(echo "$INPUT" | jq -r '.cwd // empty')
+CONFIG_FILE="${CWD}/.sentinel/config.json"
+if [ -f "$CONFIG_FILE" ]; then
+    ENABLED=$(jq -r '.hooks.design_review_reminder // false' "$CONFIG_FILE" 2>/dev/null || echo "false")
+else
+    ENABLED="false"
+fi
+[ "$ENABLED" != "true" ] && exit 0
+
 # Extract file path from tool input
 FILE_PATH=$(echo "$INPUT" | jq -r '.tool_input.file_path // .tool_input.filePath // empty')
 

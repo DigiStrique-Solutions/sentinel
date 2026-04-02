@@ -221,8 +221,7 @@ fi
 # Clean up session-scoped sentinel tracking
 if [ -n "$SESSION_ID" ]; then
     rm -rf "${CWD}/.sentinel/sessions/${SHORT_ID}" 2>/dev/null || true
-    # Clean up session registry entry
-    rm -f "${CWD}/.sentinel/sessions/${SHORT_ID}.json" 2>/dev/null || true
+    # Note: do NOT delete ${SHORT_ID}.json here — stop-merge.sh owns that lifecycle
 else
     # Legacy: no session_id, clean up flat .sentinel/
     rm -f "${CWD}/.sentinel/modified-files.txt" "${CWD}/.sentinel/scope-warned" 2>/dev/null || true

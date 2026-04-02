@@ -47,7 +47,7 @@ echo ""
 echo "--- Open investigations older than 90 days ---"
 INVESTIGATIONS_DIR="${VAULT_DIR}/investigations"
 if [ -d "$INVESTIGATIONS_DIR" ]; then
-    find "$INVESTIGATIONS_DIR" -name "*.md" -type f 2>/dev/null | while read -r file; do
+    while read -r file; do
         filename=$(basename "$file")
         [ "$filename" = "_template.md" ] && continue
 
@@ -74,7 +74,7 @@ if [ -d "$INVESTIGATIONS_DIR" ]; then
                 fi
                 ;;
         esac
-    done
+    done < <(find "$INVESTIGATIONS_DIR" -name "*.md" -type f 2>/dev/null)
 else
     echo "  No investigations/ directory found"
 fi
@@ -84,7 +84,7 @@ echo ""
 echo "--- Gotchas referencing deleted files ---"
 GOTCHAS_DIR="${VAULT_DIR}/gotchas"
 if [ -d "$GOTCHAS_DIR" ]; then
-    find "$GOTCHAS_DIR" -name "*.md" -type f 2>/dev/null | while read -r file; do
+    while read -r file; do
         filename=$(basename "$file")
         [ "$filename" = "_template.md" ] && continue
         [ "$filename" = "_example.md" ] && continue
@@ -93,7 +93,7 @@ if [ -d "$GOTCHAS_DIR" ]; then
         referenced_files=$(grep -oE '(src|tests|lib|app)/[a-zA-Z0-9_./-]+\.(py|tsx?|js|go|rs|java)' "$file" 2>/dev/null | sort -u || echo "")
 
         if [ -n "$referenced_files" ]; then
-            echo "$referenced_files" | while read -r ref_file; do
+            while read -r ref_file; do
                 [ -z "$ref_file" ] && continue
                 if [ ! -f "${PROJECT_ROOT}/${ref_file}" ]; then
                     ISSUES_FOUND=$((ISSUES_FOUND + 1))
@@ -101,9 +101,9 @@ if [ -d "$GOTCHAS_DIR" ]; then
                     echo "            References: ${ref_file} (file does not exist)"
                     echo "            Action: Update or delete this gotcha"
                 fi
-            done
+            done <<< "$referenced_files"
         fi
-    done
+    done < <(find "$GOTCHAS_DIR" -name "*.md" -type f 2>/dev/null)
 else
     echo "  No gotchas/ directory found"
 fi
@@ -113,7 +113,7 @@ echo ""
 echo "--- Superseded decisions ---"
 DECISIONS_DIR="${VAULT_DIR}/decisions"
 if [ -d "$DECISIONS_DIR" ]; then
-    find "$DECISIONS_DIR" -name "*.md" -type f 2>/dev/null | while read -r file; do
+    while read -r file; do
         filename=$(basename "$file")
         [ "$filename" = "_template.md" ] && continue
 
@@ -129,7 +129,7 @@ if [ -d "$DECISIONS_DIR" ]; then
             echo "              Title: ${title}"
             echo "              Action: Archive or remove if no longer referenced"
         fi
-    done
+    done < <(find "$DECISIONS_DIR" -name "*.md" -type f 2>/dev/null)
 else
     echo "  No decisions/ directory found"
 fi

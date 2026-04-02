@@ -75,54 +75,54 @@ archive_file() {
 
 # --- 1a. Session recovery files >7 days old ---
 if [ -d "${VAULT_DIR}/session-recovery" ]; then
-    find "${VAULT_DIR}/session-recovery" -name "*.md" -type f 2>/dev/null | while read -r file; do
+    while read -r file; do
         age=$(file_age_days "$file")
         if [ "$age" -gt 7 ]; then
             archive_file "$file"
         fi
-    done
+    done < <(find "${VAULT_DIR}/session-recovery" -name "*.md" -type f 2>/dev/null)
 fi
 
 # --- 1b. Resolved investigations >30 days old ---
 if [ -d "${VAULT_DIR}/investigations/resolved" ]; then
-    find "${VAULT_DIR}/investigations/resolved" -name "*.md" -type f 2>/dev/null | while read -r file; do
+    while read -r file; do
         [ "$(basename "$file")" = "_template.md" ] && continue
         age=$(file_age_days "$file")
         if [ "$age" -gt 30 ]; then
             archive_file "$file"
         fi
-    done
+    done < <(find "${VAULT_DIR}/investigations/resolved" -name "*.md" -type f 2>/dev/null)
 fi
 
 # --- 1c. Changelog entries >90 days old ---
 if [ -d "${VAULT_DIR}/changelog" ]; then
-    find "${VAULT_DIR}/changelog" -name "*.md" -type f 2>/dev/null | while read -r file; do
+    while read -r file; do
         age=$(file_age_days "$file")
         if [ "$age" -gt 90 ]; then
             archive_file "$file"
         fi
-    done
+    done < <(find "${VAULT_DIR}/changelog" -name "*.md" -type f 2>/dev/null)
 fi
 
 # --- 1d. Decisions with status "superseded" or "deprecated" ---
 if [ -d "${VAULT_DIR}/decisions" ]; then
-    find "${VAULT_DIR}/decisions" -name "*.md" -type f 2>/dev/null | while read -r file; do
+    while read -r file; do
         [ "$(basename "$file")" = "_template.md" ] && continue
         status=$(awk '/^---$/{n++; next} n==1 && /^status:/{gsub(/^status: */, ""); print; exit}' "$file" 2>/dev/null || echo "")
         if [ "$status" = "superseded" ] || [ "$status" = "deprecated" ]; then
             archive_file "$file"
         fi
-    done
+    done < <(find "${VAULT_DIR}/decisions" -name "*.md" -type f 2>/dev/null)
 fi
 
 # --- 1e. Activity feed files >30 days old ---
 if [ -d "${VAULT_DIR}/activity" ]; then
-    find "${VAULT_DIR}/activity" -name "*.md" -type f 2>/dev/null | while read -r file; do
+    while read -r file; do
         age=$(file_age_days "$file")
         if [ "$age" -gt 30 ]; then
             archive_file "$file"
         fi
-    done
+    done < <(find "${VAULT_DIR}/activity" -name "*.md" -type f 2>/dev/null)
 fi
 
 # --- 1f. Empty directories (cleanup) ---

@@ -9,7 +9,7 @@
 | tdd-guide | Test-driven development | New features, bug fixes |
 | code-reviewer | Code review | After writing code |
 | security-reviewer | Security analysis | Before commits |
-| build-error-resolver | Fix build errors | When build fails |
+| build-resolver | Fix build errors | When build fails |
 | e2e-runner | E2E testing | Critical user flows |
 | refactor-cleaner | Dead code cleanup | Code maintenance |
 | doc-updater | Documentation | Updating docs |

@@ -184,7 +184,7 @@ if [ -d "${VAULT_DIR}/patterns/learned" ]; then
     for f in "${VAULT_DIR}/patterns/learned/"*.md; do
         [ -f "$f" ] || continue
         CONF=$(grep "^confidence:" "$f" 2>/dev/null | head -1 | awk '{print $2}')
-        if [ -n "$CONF" ] && [ "$(echo "$CONF >= 0.7" | bc 2>/dev/null || echo 0)" -eq 1 ]; then
+        if [ -n "$CONF" ] && awk "BEGIN {if ($CONF >= 0.7) exit 0; else exit 1}" 2>/dev/null; then
             NAME=$(basename "$f" .md)
             TITLE=$(grep -m1 '^# ' "$f" 2>/dev/null | sed 's/^# //')
             HIGH_CONF_PATTERNS="${HIGH_CONF_PATTERNS}\n- **${NAME}**: ${TITLE} (confidence: ${CONF})"

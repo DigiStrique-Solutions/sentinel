@@ -4,6 +4,29 @@ All notable changes to Sentinel will be documented in this file.
 
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.9.1] - 2026-04-02
+
+### Fixed
+
+- **CRITICAL: session-start-index.sh nuked .sentinel/ directory** — `rm -rf .sentinel` ran after `session-start-isolate.sh` registered concurrent sessions, destroying all session data. Removed the destructive cleanup entirely; session cleanup is handled by `stop-enforcer.sh` at session end.
+
+- **CRITICAL: Stop hook ordering prevented worktree merges** — `stop-enforcer.sh` ran before `stop-merge.sh` and deleted the session `.json` file that merge needed. Reordered to: `stop-git → stop-merge → stop-enforcer`. Also removed session `.json` deletion from enforcer (lifecycle owned by `stop-merge.sh`).
+
+- **Subshell variable scoping in prune scripts** — `find ... | while read` created subshells where `ARCHIVED` and `ISSUES_FOUND` counter increments were lost. Both `session-start-prune.sh` (5 instances) and `scripts/vault-prune.sh` (3 instances + 1 nested) always reported 0. Fixed with process substitution (`< <(find ...)`) and here-strings (`<<< "$var"`).
+
+- **`bc` dependency in session-start-loader.sh** — Float comparison for pattern confidence scores used `bc`, which isn't available in minimal Docker images. Replaced with portable `awk` expression.
+
+- **Optional hooks config gap** — 4 optional hooks existed in `hooks/optional/` but weren't registered in `hooks.json`. The `/sentinel config` command saved preferences but nothing activated them. Fixed by registering all optional hooks in `hooks.json` with self-guarding config checks — each script reads `.sentinel/config.json` and exits immediately if not enabled.
+
+- **No LICENSE file** — README said MIT but no LICENSE file existed. Added standard MIT LICENSE.
+
+- **Git URL inconsistency** — `package.json` and README referenced `strique-io/sentinel` but actual remote is `DigiStrique-Solutions/sentinel`. Fixed both.
+
+### Changed
+
+- `hooks.json` — Stop hooks reordered; 4 optional hooks now registered (self-guarding)
+- `commands/config.md` — Removed "must manually register hooks" note; optional hooks are pre-registered
+
 ## [0.9.0] - 2026-04-02
 
 ### Added
@@ -94,10 +117,10 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), version
   - Zero config: works automatically for any project with `vault/architecture/` docs
 
 - **CLAUDE.md fact checking** — Verifies numerical claims against actual codebase at session start
-  - `scripts/check-facts.sh` — Greps CLAUDE.md for patterns like "209 connector tools", "20 controllers", etc.
-  - Verifies against actual file/symbol counts (e.g., `@connector_tool` decorators, `.py` files in controllers/)
+  - `scripts/check-facts.sh` — Reads user-defined fact-check rules from `.sentinel/fact-checks.yml` and verifies numerical claims in CLAUDE.md against actual codebase counts
+  - Configurable: each check defines a CLAUDE.md pattern to match and a shell command to count the real value
   - Warns when a claimed number differs from reality by >10%
-  - Checks: connector tools (total + per platform), controllers, ORM entities, SKILL.md files, API client modules
+  - No hardcoded project-specific checks — fully driven by config file
   - Integrated into `session-start-loader.sh` — runs at session start, outputs warnings so Claude updates CLAUDE.md
 
 ### Changed

@@ -23,10 +23,6 @@ if [ ! -d "$VAULT_DIR" ]; then
     exit 0
 fi
 
-# Also clear previous session's tracker on new session start
-SENTINEL_DIR="${CWD}/.sentinel"
-rm -rf "$SENTINEL_DIR" 2>/dev/null || true
-
 # Check if index needs rebuilding:
 # 1. Stale marker exists (set by post-tool-tracker when vault files change)
 # 2. Index file doesn't exist at all

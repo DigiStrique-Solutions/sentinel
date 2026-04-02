@@ -137,13 +137,13 @@ A test that asserts `is not None` or `is True` will pass for almost any output. 
 
 ```python
 # Fails the WRONG OUTPUT check -- passes for any non-None return
-result = service.get_campaigns(org_id)
+result = service.get_items(org_id)
 assert result is not None
 
 # Passes the WRONG OUTPUT check -- catches garbage data
-result = service.get_campaigns(org_id)
+result = service.get_items(org_id)
 assert len(result) == 3
-assert result[0].name == "Summer Campaign"
+assert result[0].name == "Test Item"
 assert result[0].status == "ACTIVE"
 ```
 

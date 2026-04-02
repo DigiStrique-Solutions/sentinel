@@ -56,6 +56,11 @@
             "type": "command",
             "command": "\"${CLAUDE_PLUGIN_ROOT}/hooks/engine/post-tool-tracker.sh\"",
             "timeout": 3000
+          },
+          {
+            "type": "command",
+            "command": "\"${CLAUDE_PLUGIN_ROOT}/hooks/optional/post-tool-design-check.sh\"",
+            "timeout": 3000
           }
         ]
       },
@@ -85,6 +90,17 @@
         ]
       }
     ],
+    "Prompt": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"${CLAUDE_PLUGIN_ROOT}/hooks/optional/prompt-vault-search.sh\"",
+            "timeout": 5000
+          }
+        ]
+      }
+    ],
     "PreCompact": [
       {
         "hooks": [
@@ -101,11 +117,6 @@
         "hooks": [
           {
             "type": "command",
-            "command": "\"${CLAUDE_PLUGIN_ROOT}/hooks/engine/stop-enforcer.sh\"",
-            "timeout": 10000
-          },
-          {
-            "type": "command",
             "command": "\"${CLAUDE_PLUGIN_ROOT}/hooks/engine/stop-git.sh\"",
             "timeout": 15000
           },
@@ -113,6 +124,21 @@
             "type": "command",
             "command": "\"${CLAUDE_PLUGIN_ROOT}/hooks/engine/stop-merge.sh\"",
             "timeout": 30000
+          },
+          {
+            "type": "command",
+            "command": "\"${CLAUDE_PLUGIN_ROOT}/hooks/optional/stop-pattern-extractor.sh\"",
+            "timeout": 10000
+          },
+          {
+            "type": "command",
+            "command": "\"${CLAUDE_PLUGIN_ROOT}/hooks/optional/stop-session-summary.sh\"",
+            "timeout": 10000
+          },
+          {
+            "type": "command",
+            "command": "\"${CLAUDE_PLUGIN_ROOT}/hooks/engine/stop-enforcer.sh\"",
+            "timeout": 10000
           }
         ]
       }

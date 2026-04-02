@@ -18,6 +18,15 @@ CWD=$(echo "$INPUT" | jq -r '.cwd // empty')
 
 VAULT_DIR="${CWD}/vault"
 
+# Check if this optional hook is enabled via config
+CONFIG_FILE="${CWD}/.sentinel/config.json"
+if [ -f "$CONFIG_FILE" ]; then
+    ENABLED=$(jq -r '.hooks.vault_search_on_prompt // false' "$CONFIG_FILE" 2>/dev/null || echo "false")
+else
+    ENABLED="false"
+fi
+[ "$ENABLED" != "true" ] && exit 0
+
 # Graceful exit if vault doesn't exist
 if [ ! -d "$VAULT_DIR" ]; then
     exit 0

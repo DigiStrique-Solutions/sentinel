@@ -222,7 +222,7 @@ Active batches:
 
 1. **Sub-agents for isolation.** Each file gets its own context window via the Agent tool. Never process files in the main context — that's how you exhaust it.
 2. **State file after every item.** Write to disk after each file is processed. If the session crashes, you resume from the last checkpoint — not from the beginning.
-3. **Flatten output paths.** Convert `src/connectors/meta/campaigns.py` to `src--connectors--meta--campaigns.py.md` in the output directory to avoid nested directories.
+3. **Flatten output paths.** Convert `src/services/users/auth.py` to `src--services--users--auth.py.md` in the output directory to avoid nested directories.
 4. **Don't read results into main context.** The aggregation step should use sub-agents too if the result set is large (>50 files). Only the INDEX.md summary comes back to the main context.
 5. **Respect rate limits.** Parallel > 3 can cause issues. Default to 1, let users opt into parallelism.
 6. **Skip binary files.** If a glob matches images, compiled files, or other non-text content, skip them silently.

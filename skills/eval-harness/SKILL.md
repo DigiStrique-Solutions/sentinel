@@ -53,7 +53,7 @@ Scenario:
 |----------|---------------|---------|
 | Single-turn | Basic prompt-response quality | "Summarize this data" |
 | Multi-turn | Context retention across turns | Initial prompt + follow-up |
-| Tool-use | Correct tool selection and invocation | "Fetch my campaign metrics" |
+| Tool-use | Correct tool selection and invocation | "Fetch my recent orders" |
 | Reasoning | Multi-step logic and analysis | "Compare performance across channels" |
 | Creative | Open-ended generation quality | "Write a strategy document" |
 | Edge case | Boundary and failure handling | Empty data, invalid inputs |
@@ -103,9 +103,9 @@ VAGUE (bad):
   - "Output should be formatted well"
 
 PRECISE (good):
-  - "Response must contain at least 3 campaign names from the mock data"
+  - "Response must contain at least 3 item names from the mock data"
   - "When the API returns a 401 error, the agent must suggest re-authenticating"
-  - "Output must be a markdown table with columns: Name, Spend, ROAS"
+  - "Output must be a markdown table with columns: Name, Status, Value"
 ```
 
 ---

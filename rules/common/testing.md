@@ -37,8 +37,8 @@ A test MUST:
 Names should describe **behavior**, not implementation:
 
 ```
-BAD:  test_get_campaigns_calls_api
-GOOD: test_get_campaigns_returns_active_campaigns_for_org
+BAD:  test_get_items_calls_api
+GOOD: test_get_items_returns_active_items_for_org
 ```
 
 ## Mocking Guidelines

@@ -42,7 +42,7 @@ find "$ARCH_DIR" -name "*.md" -type f 2>/dev/null | while read -r doc; do
 
     # Extract file path references from the doc
     # Matches patterns like src/..., tests/..., lib/..., app/..., packages/...
-    REFS=$(grep -oE '(src|tests|lib|app|packages|strique-[a-z-]+)/[a-zA-Z0-9_./-]+\.(py|tsx?|jsx?|go|rs|java|rb|swift|kt|sh|json|toml|yaml|yml|md)' "$doc" 2>/dev/null | sort -u || echo "")
+    REFS=$(grep -oE '(src|tests|lib|app|packages)/[a-zA-Z0-9_./-]+\.(py|tsx?|jsx?|go|rs|java|rb|swift|kt|sh|json|toml|yaml|yml|md)' "$doc" 2>/dev/null | sort -u || echo "")
 
     if [ -z "$REFS" ]; then
         continue
@@ -61,7 +61,7 @@ find "$ARCH_DIR" -name "*.md" -type f 2>/dev/null | while read -r doc; do
     # Check if any modified directories overlap with directories mentioned in this doc
     if [ -n "$MODIFIED_DIRS" ]; then
         # Extract directory references from the doc
-        DOC_DIRS=$(grep -oE '(src|tests|lib|app|packages|strique-[a-z-]+)/[a-zA-Z0-9_/-]+/' "$doc" 2>/dev/null | sort -u || echo "")
+        DOC_DIRS=$(grep -oE '(src|tests|lib|app|packages)/[a-zA-Z0-9_/-]+/' "$doc" 2>/dev/null | sort -u || echo "")
 
         while IFS= read -r doc_dir; do
             [ -z "$doc_dir" ] && continue

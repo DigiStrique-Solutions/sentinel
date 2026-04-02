@@ -49,7 +49,7 @@ This test passes even if the real classifier is deleted from the codebase.
 ```python
 async def test_classify_multi_step_query_needs_planning():
     classifier = ComplexityClassifier()
-    result = await classifier.classify("Audit my campaigns and create a report")
+    result = await classifier.classify("Audit my records and create a report")
     assert result.needs_planning is True
     assert result.estimated_steps >= 2
 ```

@@ -29,7 +29,7 @@ Sentinel is a Claude Code plugin that gives your AI assistant **institutional me
 ## Install
 
 ```bash
-claude plugin add sentinel@strique-marketplace
+claude plugin add sentinel
 ```
 
 Then bootstrap your project:
@@ -119,7 +119,7 @@ Next session starts → better context loaded
 - `stop-git` — Auto-commits all changes with conventional message (Git Autopilot)
 - `stop-merge` — Auto-merges worktree branch back and cleans up
 
-**Optional (4):**
+**Optional (4, self-guarding — enable via `/sentinel config`):**
 - `stop-pattern-extractor` — Extracts reusable patterns from session
 - `stop-session-summary` — Generates session summary for vault
 - `prompt-vault-search` — Searches vault for relevant context on user prompts

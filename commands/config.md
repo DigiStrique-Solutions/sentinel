@@ -87,8 +87,7 @@ Changes:
   - Changed: gotcha_staleness_days 30 -> 60
 ```
 
-If hooks were enabled, remind:
+If hooks were enabled or disabled, confirm:
 ```
-Note: Hook files must be registered in .claude/settings.json to take effect.
-Run /doctor to verify hook registration.
+Optional hooks are pre-registered and self-guarding. Changes take effect on next session start.
 ```
