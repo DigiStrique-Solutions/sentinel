@@ -12,6 +12,8 @@ Sentinel is a Claude Code plugin that gives your AI assistant **institutional me
 
 **Team Collaboration** — Multiple developers share vault knowledge through git. A custom merge driver prevents conflicts on vault files. A daily activity feed logs what each team member's sessions did. New members get guided onboarding via `/sentinel onboard`.
 
+**Verification, Not Trust** — Claude can claim "tests pass" without running them, or say "all done" with tasks still pending. Sentinel catches both. An evidence log records every test/lint/build command with its actual exit status — Claude can't retroactively claim success. A todo mirror tracks task state independently — if tasks are incomplete at session end, they're listed. The stop hook audits evidence against what should have happened: "5 Python files modified, 0 test executions found."
+
 **Documentation Drift Detection** — Architecture docs and CLAUDE.md go stale as code changes. Sentinel detects this automatically. At session end, it scans architecture docs for dead file references. At session start, it verifies CLAUDE.md numerical claims against actual counts. Stale docs get flagged so Claude updates them.
 
 **Memory** — A vault system that persists investigations, gotchas, decisions, and patterns across sessions. When a fix attempt fails, it's logged. When a non-obvious constraint is discovered, it's recorded. The next session reads these before starting work.
@@ -94,9 +96,9 @@ Next session starts → better context loaded
 
 ## What's Included
 
-### Hooks (17)
+### Hooks (19)
 
-**Core (13):**
+**Core (15):**
 - `session-start-isolate` — Detects concurrent sessions, auto-creates worktrees for isolation
 - `session-start-git` — Auto-creates branch if on main/master (Git Autopilot)
 - `session-start-loader` — Loads vault context (investigations, gotchas, recovery)
@@ -106,6 +108,8 @@ Next session starts → better context loaded
 - `pre-tool-scope` — Validates file edits stay within task scope
 - `post-tool-tracker` — Tracks files modified during session (session-scoped)
 - `post-tool-test-watch` — Reminds to run tests after code changes
+- `post-tool-evidence` — Logs verification commands (test/lint/build) with pass/fail status
+- `post-tool-todo-mirror` — Mirrors TodoWrite state for independent completeness checking
 - `pre-compact-save` — Saves session context before compaction
 - `stop-enforcer` — Enforces quality gates at session end (session-scoped cleanup)
 - `stop-git` — Auto-commits all changes with conventional message (Git Autopilot)

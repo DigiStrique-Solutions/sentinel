@@ -4,6 +4,32 @@ All notable changes to Sentinel will be documented in this file.
 
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.0] - 2026-04-02
+
+### Added
+
+- **Evidence-based verification** — Immutable audit trail of what actually happened during a session
+  - `post-tool-evidence.sh` — PostToolUse hook on Bash that logs every verification command (test, lint, type check, build) with its pass/fail status to `.sentinel/sessions/<id>/evidence.log`
+  - Captures: pytest, jest, vitest, playwright, ruff, eslint, tsc, yarn build, and more
+  - The evidence log cannot be altered by Claude — it records what the hooks observed, not what Claude claims
+  - Stop-time audit in `stop-enforcer.sh` checks evidence against what should have happened:
+    - Source files modified but **no test command found** → "TESTS NEVER RAN"
+    - Last test run **failed** with no subsequent pass → "TESTS FAILED"
+    - Python files changed but **no linter run** → "PYTHON LINTER NEVER RAN"
+    - TS/JS files changed but **no type check** → "TYPE CHECK NEVER RAN"
+    - 3+ files modified but **no verification commands at all** → "NO VERIFICATION COMMANDS RUN"
+
+- **Todo completeness enforcement** — Catches "all done!" when tasks are still pending
+  - `post-tool-todo-mirror.sh` — PostToolUse hook on TodoWrite that mirrors todo state to `.sentinel/sessions/<id>/todos.json`
+  - Stop-time audit checks the mirror file: if any todos are `pending` or `in_progress`, lists them with a warning
+  - Solves the problem where Claude does tasks X and Y but skips task Z and claims completion
+
+### Changed
+
+- `stop-enforcer.sh` — Added evidence audit (section 6) and todo completeness check (section 5)
+- `hooks.json` — Registered `post-tool-evidence.sh` (PostToolUse on Bash) and `post-tool-todo-mirror.sh` (PostToolUse on TodoWrite)
+- Hook count increased from 17 to 19 (15 core + 4 optional)
+
 ## [0.6.0] - 2026-04-02
 
 ### Added

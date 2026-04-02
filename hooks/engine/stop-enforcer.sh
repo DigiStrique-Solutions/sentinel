@@ -114,7 +114,89 @@ if [ -n "$FILES_CHANGED" ]; then
     fi
 fi
 
-# --- 5. Clean up old session recovery files ---
+# --- 5. Todo completeness audit ---
+# If Claude used TodoWrite, check that all items are completed.
+# This catches "all done!" when task Z was never touched.
+TODO_FILE="${SENTINEL_DIR}/todos.json"
+if [ -f "$TODO_FILE" ]; then
+    # Count pending and in_progress items
+    PENDING=$(jq '[.todos[] | select(.status == "pending")] | length' "$TODO_FILE" 2>/dev/null || echo "0")
+    IN_PROGRESS=$(jq '[.todos[] | select(.status == "in_progress")] | length' "$TODO_FILE" 2>/dev/null || echo "0")
+    INCOMPLETE=$((PENDING + IN_PROGRESS))
+
+    if [ "$INCOMPLETE" -gt 0 ]; then
+        # List the incomplete items
+        INCOMPLETE_LIST=$(jq -r '.todos[] | select(.status != "completed") | "    - [\(.status)] \(.content)"' "$TODO_FILE" 2>/dev/null || echo "")
+        WARNINGS="${WARNINGS}\n\n**INCOMPLETE TASKS** — ${INCOMPLETE} task(s) not marked as completed:\n${INCOMPLETE_LIST}\n- [ ] Complete all tasks before ending the session, or explicitly tell the user which tasks remain."
+    fi
+fi
+
+# --- 6. Evidence-based verification audit ---
+# Check the evidence log for required verification commands.
+# If source files were modified but tests/lint were never run, flag it.
+EVIDENCE_FILE="${SENTINEL_DIR}/evidence.log"
+if [ -n "$FILES_CHANGED" ] && [ "$FILE_COUNT" -gt 0 ]; then
+    # Determine what types of source files were modified
+    HAS_PYTHON=$(grep -cE '\.py$' "$MODIFIED_FILE" 2>/dev/null || echo "0")
+    HAS_JS_TS=$(grep -cE '\.(tsx?|jsx?)$' "$MODIFIED_FILE" 2>/dev/null || echo "0")
+
+    if [ -f "$EVIDENCE_FILE" ]; then
+        # Check for test execution
+        TEST_RUNS=$(grep -c '|test:' "$EVIDENCE_FILE" 2>/dev/null || echo "0")
+        TEST_PASSES=$(grep -c '|test:.*|pass|' "$EVIDENCE_FILE" 2>/dev/null || echo "0")
+        TEST_FAILS=$(grep '|test:.*|fail' "$EVIDENCE_FILE" 2>/dev/null | tail -1 || echo "")
+
+        # Check for lint execution
+        LINT_RUNS=$(grep -c '|lint:' "$EVIDENCE_FILE" 2>/dev/null || echo "0")
+        LINT_FAILS=$(grep '|lint:.*|fail' "$EVIDENCE_FILE" 2>/dev/null | tail -1 || echo "")
+
+        # Check for type checking
+        TYPE_RUNS=$(grep -c '|typecheck|' "$EVIDENCE_FILE" 2>/dev/null || echo "0")
+
+        # --- Test verification ---
+        if [ "$TEST_RUNS" -eq 0 ]; then
+            WARNINGS="${WARNINGS}\n- [ ] **TESTS NEVER RAN** — ${FILE_COUNT} file(s) modified but no test command found in evidence log."
+        elif [ -n "$TEST_FAILS" ]; then
+            FAIL_TIME=$(echo "$TEST_FAILS" | cut -d'|' -f1)
+            # Check if there's a passing test AFTER the last failure
+            LAST_FAIL_LINE=$(grep -n '|test:.*|fail' "$EVIDENCE_FILE" 2>/dev/null | tail -1 | cut -d: -f1)
+            LAST_PASS_LINE=$(grep -n '|test:.*|pass' "$EVIDENCE_FILE" 2>/dev/null | tail -1 | cut -d: -f1)
+            if [ -z "$LAST_PASS_LINE" ] || [ "${LAST_PASS_LINE:-0}" -lt "${LAST_FAIL_LINE:-0}" ]; then
+                WARNINGS="${WARNINGS}\n- [ ] **TESTS FAILED** — Last test run at ${FAIL_TIME} ended with failure. No subsequent passing run found."
+            fi
+        fi
+
+        # --- Lint verification ---
+        if [ "$HAS_PYTHON" -gt 0 ] && ! grep -q '|lint:python|' "$EVIDENCE_FILE" 2>/dev/null; then
+            WARNINGS="${WARNINGS}\n- [ ] **PYTHON LINTER NEVER RAN** — ${HAS_PYTHON} Python file(s) modified but no ruff/pylint/flake8 found in evidence log."
+        fi
+        if [ "$HAS_JS_TS" -gt 0 ] && ! grep -q '|lint:js|' "$EVIDENCE_FILE" 2>/dev/null; then
+            WARNINGS="${WARNINGS}\n- [ ] **JS/TS LINTER NEVER RAN** — ${HAS_JS_TS} JS/TS file(s) modified but no eslint/lint command found in evidence log."
+        fi
+
+        # --- Lint failure check ---
+        if [ -n "$LINT_FAILS" ]; then
+            LINT_FAIL_TIME=$(echo "$LINT_FAILS" | cut -d'|' -f1)
+            LAST_LINT_FAIL=$(grep -n '|lint:.*|fail' "$EVIDENCE_FILE" 2>/dev/null | tail -1 | cut -d: -f1)
+            LAST_LINT_PASS=$(grep -n '|lint:.*|pass' "$EVIDENCE_FILE" 2>/dev/null | tail -1 | cut -d: -f1)
+            if [ -z "$LAST_LINT_PASS" ] || [ "${LAST_LINT_PASS:-0}" -lt "${LAST_LINT_FAIL:-0}" ]; then
+                WARNINGS="${WARNINGS}\n- [ ] **LINT FAILED** — Last lint at ${LINT_FAIL_TIME} ended with failure. No subsequent passing run found."
+            fi
+        fi
+
+        # --- Type check for TypeScript ---
+        if [ "$HAS_JS_TS" -gt 0 ] && [ "$TYPE_RUNS" -eq 0 ]; then
+            WARNINGS="${WARNINGS}\n- [ ] **TYPE CHECK NEVER RAN** — ${HAS_JS_TS} TS/JS file(s) modified but no tsc found in evidence log."
+        fi
+    else
+        # No evidence file at all — no verification commands were run
+        if [ "$FILE_COUNT" -gt 2 ]; then
+            WARNINGS="${WARNINGS}\n- [ ] **NO VERIFICATION COMMANDS RUN** — ${FILE_COUNT} file(s) modified but no tests, lint, or type checks found in the session."
+        fi
+    fi
+fi
+
+# --- 7. Clean up old session recovery files ---
 if [ -d "${VAULT_DIR}/session-recovery" ]; then
     # Compaction recovery files: delete after 4 hours
     find "${VAULT_DIR}/session-recovery" -name "20*-*.md" ! -name "summary-*" -mmin +240 -type f -delete 2>/dev/null || true
