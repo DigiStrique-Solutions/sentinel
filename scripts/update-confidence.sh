@@ -1,128 +1,91 @@
 #!/bin/bash
-# UPDATE PATTERN CONFIDENCE: Create, observe, or contradict learned patterns.
+# UPDATE PATTERN CONFIDENCE: Scans vault/patterns/learned/ and updates confidence scores.
+# Patterns used >5 times get promoted. Patterns unused for 30+ days get flagged.
 #
-# Usage: update-confidence.sh <vault_dir> <action> <pattern-name> [area]
-#   create      — new pattern at confidence 0.5
-#   observe     — bump confidence +0.1 (cap at 1.0)
-#   contradict  — drop confidence -0.1 (auto-delete below 0.3)
+# Usage: update-confidence.sh <vault_dir>
 #
-# Pattern files live in vault/patterns/learned/ with YAML frontmatter.
-# If a pattern has references >= 3, it is considered well-established.
-# If confidence < 0.3 after 5+ observations, the pattern is auto-deleted.
+# Actions:
+#   - Scans all pattern files in vault/patterns/learned/
+#   - Promotes patterns with references >= 5 (confidence capped at 1.0)
+#   - Flags patterns not seen in 30+ days for review
+#   - Reports summary of all pattern states
 
 set -euo pipefail
 
-VAULT_DIR="${1:?Usage: update-confidence.sh <vault_dir> <action> <pattern-name> [area]}"
-ACTION="${2:?Missing action: create|observe|contradict}"
-PATTERN_NAME="${3:?Missing pattern name}"
-AREA="${4:-general}"
-
+VAULT_DIR="${1:?Usage: update-confidence.sh <vault_dir>}"
 PATTERN_DIR="${VAULT_DIR}/patterns/learned"
-PATTERN_FILE="${PATTERN_DIR}/${PATTERN_NAME}.md"
 
-mkdir -p "$PATTERN_DIR"
+if [ ! -d "$PATTERN_DIR" ]; then
+    echo "No patterns directory found at ${PATTERN_DIR}"
+    exit 0
+fi
 
-case "$ACTION" in
-    create)
-        if [ -f "$PATTERN_FILE" ]; then
-            echo "Pattern '${PATTERN_NAME}' already exists — treating as observe"
-            ACTION="observe"
-        else
-            cat > "$PATTERN_FILE" << EOF
----
-pattern: ${PATTERN_NAME}
-area: ${AREA}
-confidence: 0.5
-observed: 1
-references: 0
-last_seen: $(date +%Y-%m-%d)
----
+TOTAL=0
+PROMOTED=0
+FLAGGED=0
+HEALTHY=0
 
-# Pattern: ${PATTERN_NAME}
+TODAY_EPOCH=$(date +%s)
+THIRTY_DAYS=$((30 * 24 * 60 * 60))
 
-(Description to be filled — explain what the pattern is, when it applies, and why it matters)
+echo "=== Pattern Confidence Report ==="
+echo ""
 
-## When to Apply
+find "$PATTERN_DIR" -name "*.md" -type f 2>/dev/null | sort | while read -r filepath; do
+    filename=$(basename "$filepath" .md)
+    TOTAL=$((TOTAL + 1))
 
-(Describe the trigger conditions)
+    # Read frontmatter values
+    confidence=$(grep "^confidence:" "$filepath" | head -1 | awk '{print $2}')
+    references=$(grep "^references:" "$filepath" | head -1 | awk '{print $2}')
+    observed=$(grep "^observed:" "$filepath" | head -1 | awk '{print $2}')
+    last_seen=$(grep "^last_seen:" "$filepath" | head -1 | awk '{print $2}')
 
-## Example
+    confidence="${confidence:-0.5}"
+    references="${references:-0}"
+    observed="${observed:-1}"
+    last_seen="${last_seen:-}"
 
-(Show a concrete example if applicable)
-EOF
-            echo "Created pattern: ${PATTERN_FILE}"
-            exit 0
-        fi
-        ;;
-    observe|contradict)
-        if [ ! -f "$PATTERN_FILE" ]; then
-            echo "Pattern '${PATTERN_NAME}' does not exist. Use 'create' first."
-            exit 1
-        fi
-        ;;
-    *)
-        echo "Unknown action: ${ACTION}. Use create|observe|contradict."
-        exit 1
-        ;;
-esac
+    # Check if pattern should be promoted (references >= 5)
+    if [ "$references" -ge 5 ]; then
+        if [ "$(echo "$confidence < 0.9" | bc)" -eq 1 ]; then
+            NEW_CONF="0.9"
+            PROMOTED=$((PROMOTED + 1))
+            echo "PROMOTED: ${filename} (${references} references, confidence ${confidence} -> ${NEW_CONF})"
 
-# Read current values from frontmatter
-CURRENT_CONF=$(grep "^confidence:" "$PATTERN_FILE" | head -1 | awk '{print $2}')
-CURRENT_OBS=$(grep "^observed:" "$PATTERN_FILE" | head -1 | awk '{print $2}')
-CURRENT_REFS=$(grep "^references:" "$PATTERN_FILE" | head -1 | awk '{print $2}')
-
-# Defaults if missing
-CURRENT_CONF="${CURRENT_CONF:-0.5}"
-CURRENT_OBS="${CURRENT_OBS:-1}"
-CURRENT_REFS="${CURRENT_REFS:-0}"
-
-case "$ACTION" in
-    observe)
-        # Bump confidence by 0.1, cap at 1.0
-        NEW_CONF=$(echo "$CURRENT_CONF + 0.1" | bc)
-        if [ "$(echo "$NEW_CONF > 1.0" | bc)" -eq 1 ]; then
-            NEW_CONF="1.0"
-        fi
-        NEW_OBS=$((CURRENT_OBS + 1))
-        NEW_REFS=$((CURRENT_REFS + 1))
-
-        # Check if pattern is now well-established
-        if [ "$NEW_REFS" -ge 3 ]; then
-            echo "Pattern '${PATTERN_NAME}' is well-established (${NEW_REFS} references)"
-        fi
-
-        echo "Observed pattern '${PATTERN_NAME}': confidence ${CURRENT_CONF} → ${NEW_CONF} (${NEW_OBS} observations, ${NEW_REFS} references)"
-        ;;
-    contradict)
-        # Drop confidence by 0.1
-        NEW_CONF=$(echo "$CURRENT_CONF - 0.1" | bc)
-        NEW_OBS=$((CURRENT_OBS + 1))
-        NEW_REFS="${CURRENT_REFS}"
-
-        # Auto-delete if confidence below 0.3 AND enough observations to be sure
-        if [ "$(echo "$NEW_CONF < 0.3" | bc)" -eq 1 ]; then
-            if [ "$NEW_OBS" -ge 5 ]; then
-                echo "Pattern '${PATTERN_NAME}' confidence dropped to ${NEW_CONF} after ${NEW_OBS} observations — deleting (below 0.3 threshold with 5+ observations)"
-                rm "$PATTERN_FILE"
-                exit 0
+            # Update confidence in file
+            if [[ "$OSTYPE" == "darwin"* ]]; then
+                sed -i '' "s/^confidence: .*/confidence: ${NEW_CONF}/" "$filepath"
             else
-                echo "Pattern '${PATTERN_NAME}' confidence at ${NEW_CONF} but only ${NEW_OBS} observations — keeping (need 5+ to auto-delete)"
+                sed -i "s/^confidence: .*/confidence: ${NEW_CONF}/" "$filepath"
+            fi
+        else
+            HEALTHY=$((HEALTHY + 1))
+        fi
+    fi
+
+    # Check if pattern is stale (not seen in 30+ days)
+    if [ -n "$last_seen" ]; then
+        # Convert last_seen date to epoch
+        if [[ "$OSTYPE" == "darwin"* ]]; then
+            last_seen_epoch=$(date -j -f "%Y-%m-%d" "$last_seen" "+%s" 2>/dev/null || echo "0")
+        else
+            last_seen_epoch=$(date -d "$last_seen" "+%s" 2>/dev/null || echo "0")
+        fi
+
+        if [ "$last_seen_epoch" -gt 0 ]; then
+            age=$((TODAY_EPOCH - last_seen_epoch))
+            if [ "$age" -gt "$THIRTY_DAYS" ]; then
+                days_ago=$((age / 86400))
+                FLAGGED=$((FLAGGED + 1))
+                echo "STALE: ${filename} (last seen ${days_ago} days ago, confidence ${confidence})"
             fi
         fi
+    fi
+done
 
-        echo "Contradicted pattern '${PATTERN_NAME}': confidence ${CURRENT_CONF} → ${NEW_CONF}"
-        ;;
-esac
-
-# Update frontmatter in place (macOS sed -i '' / Linux sed -i)
-if [[ "$OSTYPE" == "darwin"* ]]; then
-    sed -i '' "s/^confidence: .*/confidence: ${NEW_CONF}/" "$PATTERN_FILE"
-    sed -i '' "s/^observed: .*/observed: ${NEW_OBS}/" "$PATTERN_FILE"
-    sed -i '' "s/^references: .*/references: ${NEW_REFS}/" "$PATTERN_FILE"
-    sed -i '' "s/^last_seen: .*/last_seen: $(date +%Y-%m-%d)/" "$PATTERN_FILE"
-else
-    sed -i "s/^confidence: .*/confidence: ${NEW_CONF}/" "$PATTERN_FILE"
-    sed -i "s/^observed: .*/observed: ${NEW_OBS}/" "$PATTERN_FILE"
-    sed -i "s/^references: .*/references: ${NEW_REFS}/" "$PATTERN_FILE"
-    sed -i "s/^last_seen: .*/last_seen: $(date +%Y-%m-%d)/" "$PATTERN_FILE"
-fi
+echo ""
+echo "=== Summary ==="
+echo "Total patterns scanned: $(find "$PATTERN_DIR" -name "*.md" -type f 2>/dev/null | wc -l | tr -d ' ')"
+echo "Promoted (>5 references): ${PROMOTED}"
+echo "Flagged (>30 days stale): ${FLAGGED}"

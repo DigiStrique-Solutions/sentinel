@@ -1,320 +1,303 @@
 ---
 name: eval-harness
-description: Eval-driven development framework for AI-assisted workflows. Activates when defining pass/fail criteria, measuring agent reliability, creating regression test suites, or benchmarking performance. Covers capability evals, regression evals, grader types, pass@k metrics, and ground truth management.
+description: Evaluation harness for testing AI agent prompts and outputs against ground truth. Activates when designing eval scenarios, running prompt evaluations, interpreting results, or iterating on agent behavior. Covers scenario design, expectation definition, ground truth generation, regression testing, and convergence loops.
 origin: sentinel
-tools: Read, Write, Edit, Bash, Grep, Glob
 ---
 
 # Eval Harness
 
-A formal evaluation framework implementing eval-driven development (EDD) principles. Evals are the unit tests of AI development -- they define expected behavior, measure reliability, and catch regressions.
+A framework for systematically evaluating AI agent prompts and outputs. Instead of manual spot-checking, this skill defines a repeatable process for measuring agent quality against ground truth.
 
 ## When to Activate
 
-- Setting up eval-driven development for AI-assisted workflows
-- Defining pass/fail criteria for agent task completion
-- Measuring agent reliability with pass@k metrics
-- Creating regression test suites for prompt or agent changes
-- Benchmarking agent performance across model versions
-- Before releasing prompt changes or agent behavior changes
+- Designing evaluation scenarios for a new agent or prompt
+- Running prompt evaluations after changing agent behavior
+- Interpreting eval results to decide whether a prompt change is an improvement
+- Setting up regression testing for agent outputs
+- Iterating on prompts that consistently fail verification
 
 ---
 
-## 1. What Is Eval-Driven Development (EDD)
+## 1. Eval Scenario Design
 
-EDD applies TDD principles to AI systems where outputs are non-deterministic:
+### What Is an Eval Scenario
 
-1. **Define** expected behavior (evals) BEFORE implementation
-2. **Run** baseline evals and capture current behavior
-3. **Implement** the change (prompt, tool, agent logic)
-4. **Evaluate** against defined criteria
-5. **Iterate** until evals pass reliably
-6. **Monitor** for regressions after deployment
+An eval scenario is a structured test case for an AI agent. It includes:
+- **A prompt** -- the input given to the agent
+- **Context** -- any additional state (platform, user role, conversation history)
+- **Expectations** -- what the output must contain or satisfy
+- **Ground truth** -- a verified-correct reference output for comparison
 
-### Why Evals, Not Just Tests
+### Scenario Structure
 
-Traditional tests verify deterministic behavior: given input X, expect output Y. AI systems produce variable outputs. Evals handle this by:
-- Checking for semantic correctness rather than exact match
-- Using statistical metrics (pass@k) rather than binary pass/fail
-- Employing multiple grader types for different aspects of quality
-- Tracking reliability over multiple runs
+```
+Scenario:
+  id: unique-identifier
+  category: single-turn | multi-turn | tool-use | reasoning | creative
+  prompt: "The input to the agent"
+  context:
+    platform: optional platform or domain context
+    history: optional prior conversation turns
+  expectations:
+    required_elements: [list of things the output must contain]
+    forbidden_elements: [list of things the output must not contain]
+    quality_description: "Human-readable description of what good looks like"
+    expects_tool_calls: true | false
+    expected_tools: [list of tool names if applicable]
+  description: "Why this scenario exists and what it tests"
+```
+
+### Scenario Categories
+
+| Category | What It Tests | Example |
+|----------|---------------|---------|
+| Single-turn | Basic prompt-response quality | "Summarize this data" |
+| Multi-turn | Context retention across turns | Initial prompt + follow-up |
+| Tool-use | Correct tool selection and invocation | "Fetch my campaign metrics" |
+| Reasoning | Multi-step logic and analysis | "Compare performance across channels" |
+| Creative | Open-ended generation quality | "Write a strategy document" |
+| Edge case | Boundary and failure handling | Empty data, invalid inputs |
+
+### Writing Good Scenarios
+
+1. **One behavior per scenario.** Do not combine "does it pick the right tool" and "is the output formatted correctly" in one scenario.
+2. **Specific expectations.** "The output should be good" is not testable. "The output must contain a numeric spend value and a trend direction" is.
+3. **Include negative cases.** Test what the agent should NOT do (hallucinate data, call wrong tools, ignore instructions).
+4. **Cover the distribution.** If agents handle 5 categories of queries, have scenarios for all 5 -- not 10 scenarios for the most common category.
 
 ---
 
-## 2. Eval Types
+## 2. Expectation Definition
 
-### Capability Evals
+### Types of Expectations
 
-Test whether the system can do something it should be able to do:
+#### Structural Expectations
+- Output contains specific fields or sections
+- Output is in a required format (JSON, markdown table, bullet list)
+- Output length is within acceptable range
 
-```markdown
-[CAPABILITY EVAL: user-registration]
-Task: Register a new user with email and password
-Success Criteria:
-  - [ ] User record created in database
-  - [ ] Password hashed (not stored in plaintext)
-  - [ ] Confirmation email triggered
-  - [ ] Response includes user ID and email
-Expected Output: 201 Created with user object
+#### Content Expectations
+- Specific keywords or values are present
+- Numerical values are within expected ranges
+- References or citations are included where required
+- Tool calls match the expected tool list
+
+#### Quality Expectations
+- Response is factually accurate (verified against ground truth)
+- Response is complete (all requested information is present)
+- Response is actionable (includes specific recommendations, not vague advice)
+- Response does not hallucinate (only uses data that was actually available)
+
+#### Behavioral Expectations
+- Agent called the correct tools in the correct order
+- Agent did not call unnecessary tools
+- Agent handled errors gracefully (when error conditions are injected)
+- Agent respected constraints (rate limits, data boundaries, permissions)
+
+### Defining Expectations Precisely
+
 ```
+VAGUE (bad):
+  - "Response should be helpful"
+  - "Agent should handle errors"
+  - "Output should be formatted well"
 
-Use when: adding new features, new agent capabilities, new tool integrations.
-
-### Regression Evals
-
-Ensure changes do not break existing functionality:
-
-```markdown
-[REGRESSION EVAL: login-flow]
-Baseline: v2.3.0
-Tests:
-  - valid-credentials-login:       PASS/FAIL
-  - invalid-password-rejection:    PASS/FAIL
-  - expired-session-redirect:      PASS/FAIL
-  - rate-limit-enforcement:        PASS/FAIL
-Result: X/Y passed (previously Y/Y)
+PRECISE (good):
+  - "Response must contain at least 3 campaign names from the mock data"
+  - "When the API returns a 401 error, the agent must suggest re-authenticating"
+  - "Output must be a markdown table with columns: Name, Spend, ROAS"
 ```
-
-Use when: modifying prompts, changing agent logic, updating tool behavior, before releases.
 
 ---
 
-## 3. Grader Types
-
-### Exact Match Grader
-
-Deterministic comparison of expected vs actual output.
-
-```python
-def grade_exact(expected: str, actual: str) -> bool:
-    return expected.strip() == actual.strip()
-```
-
-Best for: structured outputs, API responses, computed values.
-
-### Semantic Grader
-
-Checks if the output conveys the same meaning, regardless of wording.
-
-```python
-def grade_semantic(expected: str, actual: str, threshold: float = 0.85) -> bool:
-    similarity = compute_similarity(expected, actual)
-    return similarity >= threshold
-```
-
-Best for: natural language outputs, explanations, summaries.
-
-### Rubric-Based Grader
-
-Evaluates against a multi-criteria rubric with scores.
-
-```markdown
-Rubric for: Agent Response Quality
-| Criterion      | Weight | Score (1-5) |
-|----------------|--------|-------------|
-| Correctness    | 30%    |             |
-| Completeness   | 25%    |             |
-| Actionability  | 20%    |             |
-| Presentation   | 15%    |             |
-| Tool Usage     | 10%    |             |
-
-Passing threshold: weighted average >= 3.5
-```
-
-Best for: complex outputs with multiple quality dimensions.
-
-### Model-Based Grader
-
-Uses an LLM to evaluate the output:
-
-```markdown
-[MODEL GRADER PROMPT]
-You are evaluating an AI agent's response. Check:
-1. Does it answer the stated question?
-2. Are the facts accurate?
-3. Are edge cases addressed?
-4. Is the output well-structured?
-
-Score: 1-5 (1=poor, 5=excellent)
-Reasoning: [explanation]
-Pass threshold: >= 4
-```
-
-Best for: open-ended outputs where programmatic grading is insufficient.
-
-### Code-Based Grader
-
-Deterministic checks using code execution:
-
-```bash
-# Check if file contains expected pattern
-grep -q "export function handleAuth" src/auth.ts && echo "PASS" || echo "FAIL"
-
-# Check if tests pass
-pytest tests/test_auth.py -x && echo "PASS" || echo "FAIL"
-
-# Check if build succeeds
-npm run build && echo "PASS" || echo "FAIL"
-```
-
-Best for: structural requirements, build verification, test execution.
-
----
-
-## 4. pass@k Metrics
-
-### pass@k: "At Least One Success in k Attempts"
-
-- **pass@1:** first-attempt success rate (strictest practical metric)
-- **pass@3:** success within 3 attempts (typical development target)
-- **pass@5:** success within 5 attempts (lenient, for complex tasks)
-
-### pass^k: "All k Trials Succeed"
-
-- **pass^3:** 3 consecutive successes (stability metric)
-- Higher bar than pass@k -- proves consistency, not just capability
-
-### Recommended Thresholds
-
-| Eval Category | Metric | Target |
-|---------------|--------|--------|
-| Capability evals | pass@3 | >= 90% |
-| Regression evals | pass^3 | 100% for release-critical paths |
-| Non-critical paths | pass@1 | >= 70% |
-
-### Interpreting Results
-
-- **pass@1 = 100%:** reliable and deterministic
-- **pass@1 = 70%, pass@3 = 95%:** works but flaky; investigate variance
-- **pass@1 < 50%:** fundamentally broken; redesign the approach
-- **pass@3 < 80%:** not ready for production use
-
----
-
-## 5. Ground Truth Fixture Management
+## 3. Ground Truth Generation
 
 ### What Is Ground Truth
 
-A ground truth fixture is a verified-correct reference output for a given input. It is the "expected answer" that eval runs are compared against.
+Ground truth is a verified-correct reference output for a given scenario. It represents what a correct agent response looks like.
 
-### Fixture Lifecycle
+### Generation Process
 
-```
-Define input → Generate candidate → Verify (grader) → Accept as ground truth → Use in regression evals → Regenerate when behavior intentionally changes
-```
+1. **Run the agent** against the scenario prompt with full context
+2. **Capture the output** including any tool calls, intermediate steps, and final response
+3. **Verify the output** -- manually or via an automated verifier (LLM-as-judge)
+4. **Save as fixture** -- the verified output becomes the reference for future comparisons
 
-### Storage
+### Verification Criteria
 
-```
-evals/
-  fixtures/
-    feature-a/
-      input.json          # The eval input
-      ground-truth.json   # Verified correct output
-      metadata.json       # Generation date, model version, verifier
-    feature-b/
-      ...
-  scenarios/
-    feature-a.md          # Eval definition with success criteria
-    feature-b.md          # ...
-  reports/
-    2026-04-02.md         # Daily eval report
-```
+A verification pass should check:
 
-### Staleness
+| Criterion | What It Checks |
+|-----------|----------------|
+| Correctness | Does the response accurately answer the prompt? |
+| Tool usage | Were appropriate tools called with correct parameters? |
+| Completeness | Is all necessary information included? |
+| Actionability | Are recommendations specific and implementable? |
+| Data boundary | Does the response only use available data (no hallucination)? |
+| Presentation | Is the output well-formatted and readable? |
 
-Ground truth fixtures become stale when:
-- The underlying behavior intentionally changes (prompt update, new tool)
-- The data model changes (new fields, removed fields)
-- External APIs change their response format
+### Fixture Management
 
-When a fixture is stale, **regenerate it** -- do not adjust the grader to accept the drift.
-
-### Regeneration Protocol
-
-1. Run the eval scenario in generation mode
-2. Verify the new output against success criteria (automated or manual)
-3. Accept the new output as ground truth
-4. Run regression evals to ensure nothing else broke
-5. Update the fixture metadata with generation date and model version
+- Store fixtures alongside scenario definitions
+- Include metadata: generation timestamp, agent version, verification status
+- Mark fixtures as stale after N days (configurable) -- prompt for regeneration
+- Never edit fixtures manually -- always regenerate from the agent and re-verify
 
 ---
 
-## 6. When to Use Evals
+## 4. Running Evaluations
 
-| Trigger | Eval Type | Scope |
-|---------|-----------|-------|
-| Changed agent prompt | Capability + Regression | All scenarios for that agent |
-| Changed tool behavior | Capability | Scenarios using that tool |
-| Changed output format | Regression | All scenarios that check format |
-| Pre-release | Full regression | All scenarios |
-| New capability added | Capability | New scenarios + existing regression |
-| Model version upgrade | Full regression | All scenarios |
+### Evaluation Modes
+
+| Mode | What It Does | When to Use |
+|------|-------------|-------------|
+| Generate | Run agent, verify output, save as ground truth | After changing prompts or tools |
+| Regression | Run agent, compare to existing ground truth | Before releases, after refactors |
+| Full | Generate new ground truth, then run regression | Comprehensive validation |
+
+### Execution Flow
+
+```
+1. Load scenario definition
+2. Set up context (mock data, platform state, conversation history)
+3. Run the agent with the scenario prompt
+4. Capture: final output, tool calls, intermediate reasoning, timing
+5. Verify against expectations (structural, content, quality, behavioral)
+6. Compare to ground truth (if regression mode)
+7. Report: pass/fail per criterion, overall verdict, timing SLAs
+```
+
+### Batch Running
+
+For running multiple scenarios:
+- Run scenarios in the same category together
+- Skip scenarios that already have fresh fixtures (configurable)
+- Report aggregate pass rates by category
+- Flag any scenario that was passing and is now failing (regression)
+
+### SLA Thresholds
+
+Define timing SLAs for agent performance:
+
+| Metric | What It Measures |
+|--------|-----------------|
+| Time to first token | How quickly the agent starts responding |
+| Total duration | End-to-end time for complete response |
+| Tool call duration | Time spent in tool execution |
+| Plan completion time | Time to complete multi-step plans |
+
+Set thresholds based on your application's requirements. A response that is correct but takes 5 minutes may still be a failure.
 
 ---
 
-## 7. Eval Workflow
+## 5. Interpreting Results
 
-### Phase 1: Define (Before Coding)
+### Pass/Fail Analysis
 
-```markdown
-## EVAL DEFINITION: feature-xyz
+For each failed scenario, determine:
 
-### Capability Evals
-1. Can create new resource
-2. Can validate input constraints
-3. Can handle concurrent access
+1. **Which criterion failed?** (correctness, completeness, tool usage, etc.)
+2. **Is it a prompt issue or a tool issue?** Wrong tool called = routing problem. Wrong output from right tool = prompt problem.
+3. **Is it a regression?** Was this scenario passing before the change?
+4. **Is the ground truth stale?** If the expected behavior has intentionally changed, regenerate ground truth first.
 
-### Regression Evals
-1. Existing CRUD operations unchanged
-2. Auth flow intact
-3. Error responses unchanged
+### Common Failure Patterns
 
-### Success Metrics
-- pass@3 > 90% for capability evals
-- pass^3 = 100% for regression evals
-```
+| Pattern | Likely Cause | Fix |
+|---------|-------------|-----|
+| Wrong tools called | Routing or skill loading mismatch | Check tool registration, skill files |
+| Correct tools, wrong output | Prompt instructions unclear | Clarify prompt, add examples |
+| Hallucinated data | Agent generating data instead of using tools | Add explicit instruction: "only use data from tool results" |
+| Incomplete response | Prompt too vague about requirements | Add specific output requirements |
+| Format wrong | Missing format instructions | Add output format specification with examples |
+| SLA violation | Slow tools or too many tool calls | Optimize tool implementation, reduce unnecessary calls |
 
-### Phase 2: Implement
+### Aggregate Metrics
 
-Write the code, prompt, or agent logic.
-
-### Phase 3: Evaluate
-
-Run each eval and record results.
-
-### Phase 4: Report
-
-```markdown
-EVAL REPORT: feature-xyz
-========================
-
-Capability Evals:
-  create-resource:     PASS (pass@1)
-  validate-input:      PASS (pass@2)
-  concurrent-access:   FAIL (pass@3: 1/3)
-  Overall:             2/3 passed
-
-Regression Evals:
-  crud-operations:     PASS
-  auth-flow:           PASS
-  error-responses:     PASS
-  Overall:             3/3 passed
-
-Metrics:
-  pass@1: 67% (2/3)
-  pass@3: 67% (2/3)
-
-Status: NEEDS WORK (concurrent-access failing)
-```
+Track over time:
+- **Pass rate by category** -- which types of scenarios are weakest?
+- **Regression rate** -- how often do passing scenarios start failing?
+- **Mean verification score** -- average quality across all scenarios
+- **SLA compliance** -- percentage of scenarios within timing thresholds
 
 ---
 
-## Eval Anti-Patterns
+## 6. Iterative Prompt Improvement
 
-- **Overfitting prompts to known eval examples** -- the prompt works on eval inputs but fails on real inputs
-- **Measuring only happy-path outputs** -- ignoring error handling and edge cases
-- **Ignoring cost and latency drift** -- chasing pass rates while API costs or response times balloon
-- **Allowing flaky graders in release gates** -- non-deterministic graders producing inconsistent results
-- **Stale fixtures** -- comparing against outdated ground truth that no longer reflects desired behavior
-- **Eval theater** -- running evals that always pass and provide no signal
+### The Eval-Fix Loop
+
+```
+1. Run eval suite
+2. Identify failing scenarios
+3. Diagnose root cause (prompt, tool, routing, data)
+4. Make targeted fix
+5. Re-run ONLY the failing scenarios
+6. If they pass, run the FULL suite (catch regressions)
+7. If full suite passes, commit
+8. If new failures appear, repeat from step 2
+```
+
+### Automated Iteration
+
+For prompts that need many refinement cycles, use an automated loop:
+
+```
+Loop until convergence or max iterations:
+  1. Run eval scenario
+  2. If pass: done
+  3. If fail: read rejection reasoning
+  4. Adjust prompt based on reasoning
+  5. Re-run
+```
+
+Set a maximum iteration count (10 is a reasonable default). If the prompt does not converge after max iterations, the problem may be architectural, not prompt-level.
+
+### Convergence Criteria
+
+A prompt change is converged when:
+- All previously-passing scenarios still pass
+- The target failing scenario now passes
+- No new failures were introduced
+
+---
+
+## 7. Scenario Maintenance
+
+### Adding New Scenarios
+
+When adding a new capability to the agent:
+1. Write the scenario BEFORE changing the prompt or tools
+2. Run it -- it should fail (the capability does not exist yet)
+3. Implement the capability
+4. Run it -- it should pass
+5. Generate and verify ground truth
+
+This is TDD applied to AI agent behavior.
+
+### Retiring Scenarios
+
+Remove scenarios when:
+- The capability they test has been intentionally removed
+- The scenario is a duplicate of another
+- The scenario tests implementation details that have been refactored
+
+Never retire a scenario because it is failing. Fix the agent or update expectations.
+
+### Coverage Gaps
+
+Periodically audit scenario coverage:
+- Are all agent capabilities tested?
+- Are all tool categories represented?
+- Are error conditions tested?
+- Are multi-turn interactions tested?
+- Are edge cases (empty data, large inputs, ambiguous queries) tested?
+
+---
+
+## Key Principles
+
+1. **Eval before ship.** Never deploy prompt or tool changes without running the eval suite.
+2. **Precise expectations beat vague quality checks.** "Output must contain X" is testable. "Output should be good" is not.
+3. **Ground truth has a shelf life.** Regenerate fixtures when agent behavior intentionally changes.
+4. **Fix the agent, not the eval.** If a scenario fails, the default assumption is that the agent is wrong. Only update expectations when behavior has intentionally changed.
+5. **Aggregate metrics reveal trends.** Individual scenario failures are symptoms. Pass rates by category reveal systemic issues.

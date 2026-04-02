@@ -1,170 +1,146 @@
 #!/bin/bash
-# VAULT DEEP CLEANUP: Identifies and cleans stale vault content.
+# VAULT PRUNE: Finds stale vault entries and outputs a report.
+# Does NOT auto-delete -- human review required.
 #
 # Checks:
-# 1. Session recovery files older than 7 days (delete)
-# 2. Changelog entries older than 30 days (archive)
-# 3. Resolved investigations not referenced in 30+ days (suggest archive)
-# 4. Empty directories (report)
-# 5. Duplicate gotchas by title (report)
+# 1. Investigations >90 days old and still open
+# 2. Gotchas referencing deleted files
+# 3. Decisions with status "superseded"
 #
-# Usage: vault-prune.sh <vault_dir> [--dry-run]
+# Usage: vault-prune.sh <vault_dir> [--project-root <root>]
 #
-# --dry-run: Show what would be done without making changes
+# --project-root: Project root directory for checking file references (default: parent of vault_dir)
 
 set -euo pipefail
 
-VAULT_DIR="${1:?Usage: vault-prune.sh <vault_dir> [--dry-run]}"
-DRY_RUN=false
-if [ "${2:-}" = "--dry-run" ]; then
-    DRY_RUN=true
-    echo "=== DRY RUN MODE ==="
-    echo ""
+VAULT_DIR="${1:?Usage: vault-prune.sh <vault_dir> [--project-root <root>]}"
+PROJECT_ROOT=""
+
+# Parse optional args
+shift
+while [ $# -gt 0 ]; do
+    case "$1" in
+        --project-root)
+            PROJECT_ROOT="${2:?Missing project root path}"
+            shift 2
+            ;;
+        *)
+            echo "Unknown option: $1"
+            exit 1
+            ;;
+    esac
+done
+
+# Default project root to parent of vault dir
+if [ -z "$PROJECT_ROOT" ]; then
+    PROJECT_ROOT=$(dirname "$VAULT_DIR")
 fi
 
-ACTIONS_TAKEN=0
 ISSUES_FOUND=0
 
-# --- 1. Session recovery files older than 7 days ---
-echo "--- Checking session recovery files (>7 days old) ---"
-SESSION_DIR="${VAULT_DIR}/session-logs"
-if [ -d "$SESSION_DIR" ]; then
-    find "$SESSION_DIR" -name "*.md" -type f -mtime +7 2>/dev/null | while read -r file; do
-        ISSUES_FOUND=$((ISSUES_FOUND + 1))
-        if [ "$DRY_RUN" = true ]; then
-            echo "  WOULD DELETE: $file"
-        else
-            rm "$file"
-            echo "  DELETED: $file"
-            ACTIONS_TAKEN=$((ACTIONS_TAKEN + 1))
-        fi
-    done
-else
-    echo "  No session-logs/ directory found — skipping"
-fi
+echo "=== Vault Prune Report ==="
+echo "Vault: ${VAULT_DIR}"
+echo "Project root: ${PROJECT_ROOT}"
 echo ""
 
-# --- 2. Changelog entries older than 30 days ---
-echo "--- Checking changelog entries (>30 days old) ---"
-CHANGELOG_DIR="${VAULT_DIR}/changelog"
-ARCHIVE_DIR="${VAULT_DIR}/changelog/archive"
-if [ -d "$CHANGELOG_DIR" ]; then
-    find "$CHANGELOG_DIR" -maxdepth 1 -name "*.md" -type f -mtime +30 2>/dev/null | while read -r file; do
-        filename=$(basename "$file")
-        # Skip templates
-        [ "$filename" = "_template.md" ] && continue
-
-        ISSUES_FOUND=$((ISSUES_FOUND + 1))
-        if [ "$DRY_RUN" = true ]; then
-            echo "  WOULD ARCHIVE: $file → ${ARCHIVE_DIR}/${filename}"
-        else
-            mkdir -p "$ARCHIVE_DIR"
-            mv "$file" "${ARCHIVE_DIR}/${filename}"
-            echo "  ARCHIVED: $file → ${ARCHIVE_DIR}/${filename}"
-            ACTIONS_TAKEN=$((ACTIONS_TAKEN + 1))
-        fi
-    done
-else
-    echo "  No changelog/ directory found — skipping"
-fi
-echo ""
-
-# --- 3. Resolved investigations not referenced in 30+ days ---
-echo "--- Checking resolved investigations (>30 days since last modified) ---"
+# --- 1. Open investigations >90 days old ---
+echo "--- Open investigations older than 90 days ---"
 INVESTIGATIONS_DIR="${VAULT_DIR}/investigations"
 if [ -d "$INVESTIGATIONS_DIR" ]; then
-    # Check both resolved/ subdirectory and files with "status: resolved" in frontmatter
-    find "$INVESTIGATIONS_DIR" -name "*.md" -type f -mtime +30 2>/dev/null | while read -r file; do
+    find "$INVESTIGATIONS_DIR" -name "*.md" -type f 2>/dev/null | while read -r file; do
         filename=$(basename "$file")
         [ "$filename" = "_template.md" ] && continue
 
-        # Check if this is a resolved investigation
-        is_resolved=false
+        # Skip if in resolved/ subdirectory
+        echo "$file" | grep -q "/resolved/" && continue
 
-        # Check if in resolved/ subdirectory
-        if echo "$file" | grep -q "/resolved/"; then
-            is_resolved=true
-        fi
+        # Check if status is still open or in-progress
+        status=$(awk '/^---$/{n++; next} n==1 && /^status:/{gsub(/^status: */, ""); print; exit}' "$file" 2>/dev/null || echo "")
 
-        # Check frontmatter for status: resolved
-        if grep -q "^status: *resolved" "$file" 2>/dev/null; then
-            is_resolved=true
-        fi
+        case "$status" in
+            open|in-progress|"")
+                # Check file age
+                if [[ "$OSTYPE" == "darwin"* ]]; then
+                    file_age_days=$(( ($(date +%s) - $(stat -f %m "$file")) / 86400 ))
+                else
+                    file_age_days=$(( ($(date +%s) - $(stat -c %Y "$file")) / 86400 ))
+                fi
 
-        if [ "$is_resolved" = true ]; then
-            ISSUES_FOUND=$((ISSUES_FOUND + 1))
-            echo "  SUGGEST ARCHIVE: $file (resolved, not modified in 30+ days)"
-        fi
+                if [ "$file_age_days" -gt 90 ]; then
+                    ISSUES_FOUND=$((ISSUES_FOUND + 1))
+                    echo "  STALE: $file"
+                    echo "         Status: ${status:-unknown}, Age: ${file_age_days} days"
+                    echo "         Action: Resolve, abandon, or update this investigation"
+                fi
+                ;;
+        esac
     done
 else
-    echo "  No investigations/ directory found — skipping"
+    echo "  No investigations/ directory found"
 fi
 echo ""
 
-# --- 4. Empty directories ---
-echo "--- Checking for empty directories ---"
-find "$VAULT_DIR" -type d -empty 2>/dev/null | while read -r dir; do
-    # Skip hidden directories
-    case "$dir" in
-        */.git*) continue ;;
-    esac
-    ISSUES_FOUND=$((ISSUES_FOUND + 1))
-    echo "  EMPTY DIR: $dir"
-done
-echo ""
-
-# --- 5. Duplicate gotchas (same title) ---
-echo "--- Checking for duplicate gotchas ---"
+# --- 2. Gotchas referencing deleted files ---
+echo "--- Gotchas referencing deleted files ---"
 GOTCHAS_DIR="${VAULT_DIR}/gotchas"
 if [ -d "$GOTCHAS_DIR" ]; then
-    # Extract titles and find duplicates
-    TITLES_TMP=$(mktemp)
-    trap "rm -f '$TITLES_TMP'" EXIT
-
     find "$GOTCHAS_DIR" -name "*.md" -type f 2>/dev/null | while read -r file; do
         filename=$(basename "$file")
         [ "$filename" = "_template.md" ] && continue
+        [ "$filename" = "_example.md" ] && continue
 
-        title=$(awk '
-            /^---$/ { fm++; next }
-            fm >= 2 && /^#/ { gsub(/^#+ */, ""); print; exit }
-            fm < 2 && /^#/ { gsub(/^#+ */, ""); print; exit }
-        ' "$file" 2>/dev/null || echo "")
+        # Extract file paths mentioned in the gotcha
+        referenced_files=$(grep -oE '(src|tests|lib|app)/[a-zA-Z0-9_./-]+\.(py|tsx?|js|go|rs|java)' "$file" 2>/dev/null | sort -u || echo "")
 
-        if [ -n "$title" ]; then
-            echo "${title}|||${file}" >> "$TITLES_TMP"
+        if [ -n "$referenced_files" ]; then
+            echo "$referenced_files" | while read -r ref_file; do
+                [ -z "$ref_file" ] && continue
+                if [ ! -f "${PROJECT_ROOT}/${ref_file}" ]; then
+                    ISSUES_FOUND=$((ISSUES_FOUND + 1))
+                    echo "  DEAD REF: $file"
+                    echo "            References: ${ref_file} (file does not exist)"
+                    echo "            Action: Update or delete this gotcha"
+                fi
+            done
         fi
     done
-
-    if [ -s "$TITLES_TMP" ]; then
-        # Find duplicate titles
-        sort -t'|' -k1,1 "$TITLES_TMP" | awk -F'\\|\\|\\|' '
-            {
-                title = $1
-                file = $2
-                if (title == prev_title && title != "") {
-                    if (!printed_first) {
-                        printf "  DUPLICATE TITLE: \"%s\"\n    - %s\n", title, prev_file
-                        printed_first = 1
-                    }
-                    printf "    - %s\n", file
-                } else {
-                    printed_first = 0
-                }
-                prev_title = title
-                prev_file = file
-            }
-        '
-    fi
-
-    rm -f "$TITLES_TMP"
 else
-    echo "  No gotchas/ directory found — skipping"
+    echo "  No gotchas/ directory found"
+fi
+echo ""
+
+# --- 3. Decisions with status "superseded" ---
+echo "--- Superseded decisions ---"
+DECISIONS_DIR="${VAULT_DIR}/decisions"
+if [ -d "$DECISIONS_DIR" ]; then
+    find "$DECISIONS_DIR" -name "*.md" -type f 2>/dev/null | while read -r file; do
+        filename=$(basename "$file")
+        [ "$filename" = "_template.md" ] && continue
+
+        status=$(awk '/^---$/{n++; next} n==1 && /^status:/{gsub(/^status: */, ""); print; exit}' "$file" 2>/dev/null || echo "")
+
+        if [ "$status" = "superseded" ] || [ "$status" = "deprecated" ]; then
+            ISSUES_FOUND=$((ISSUES_FOUND + 1))
+            title=$(awk '
+                /^---$/ { fm++; next }
+                fm >= 2 && /^#/ { gsub(/^#+ */, ""); print; exit }
+            ' "$file" 2>/dev/null || echo "$filename")
+            echo "  SUPERSEDED: $file"
+            echo "              Title: ${title}"
+            echo "              Action: Archive or remove if no longer referenced"
+        fi
+    done
+else
+    echo "  No decisions/ directory found"
 fi
 echo ""
 
 # --- Summary ---
-echo "=== Vault Prune Complete ==="
-if [ "$DRY_RUN" = true ]; then
-    echo "Dry run — no changes made. Re-run without --dry-run to apply."
+echo "=== Summary ==="
+echo "Issues found: ${ISSUES_FOUND}"
+if [ "$ISSUES_FOUND" -eq 0 ]; then
+    echo "Vault is clean -- no stale entries found."
+else
+    echo "Review the items above and take action manually."
+    echo "This script does NOT auto-delete -- all changes require human review."
 fi
