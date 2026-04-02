@@ -5,6 +5,11 @@
         "hooks": [
           {
             "type": "command",
+            "command": "\"${CLAUDE_PLUGIN_ROOT}/hooks/engine/session-start-git.sh\"",
+            "timeout": 10000
+          },
+          {
+            "type": "command",
             "command": "\"${CLAUDE_PLUGIN_ROOT}/hooks/engine/session-start-loader.sh\"",
             "timeout": 15000
           },
@@ -73,6 +78,11 @@
             "type": "command",
             "command": "\"${CLAUDE_PLUGIN_ROOT}/hooks/engine/stop-enforcer.sh\"",
             "timeout": 10000
+          },
+          {
+            "type": "command",
+            "command": "\"${CLAUDE_PLUGIN_ROOT}/hooks/engine/stop-git.sh\"",
+            "timeout": 15000
           }
         ]
       }
