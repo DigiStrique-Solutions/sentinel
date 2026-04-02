@@ -8,6 +8,8 @@ Sentinel is a Claude Code plugin that gives your AI assistant **institutional me
 
 **Git Autopilot** — You never touch git. Sentinel auto-creates branches when sessions start and auto-commits when they end. No branch management, no commit messages, no git knowledge required.
 
+**Concurrent Session Isolation** — Run multiple Claude Code agents on the same repo simultaneously. Sentinel detects concurrent sessions, auto-creates git worktrees for isolation, and auto-merges changes back when sessions end. No conflicts, no coordination needed.
+
 **Memory** — A vault system that persists investigations, gotchas, decisions, and patterns across sessions. When a fix attempt fails, it's logged. When a non-obvious constraint is discovered, it's recorded. The next session reads these before starting work.
 
 **Discipline** — Hooks that enforce quality gates, TDD workflow, and code review standards automatically. A stop hook verifies all gates pass before work is declared complete. Pre-tool hooks surface relevant gotchas before you repeat a known mistake.
@@ -88,20 +90,22 @@ Next session starts → better context loaded
 
 ## What's Included
 
-### Hooks (15)
+### Hooks (17)
 
-**Core (11):**
+**Core (13):**
+- `session-start-isolate` — Detects concurrent sessions, auto-creates worktrees for isolation
 - `session-start-git` — Auto-creates branch if on main/master (Git Autopilot)
 - `session-start-loader` — Loads vault context (investigations, gotchas, recovery)
 - `session-start-index` — Builds searchable vault index
 - `session-start-prune` — Auto-archives stale vault entries every 5th session
 - `pre-tool-gotcha` — Surfaces relevant gotchas before tool execution
 - `pre-tool-scope` — Validates file edits stay within task scope
-- `post-tool-tracker` — Tracks files modified during session
+- `post-tool-tracker` — Tracks files modified during session (session-scoped)
 - `post-tool-test-watch` — Reminds to run tests after code changes
 - `pre-compact-save` — Saves session context before compaction
-- `stop-enforcer` — Enforces quality gates at session end
+- `stop-enforcer` — Enforces quality gates at session end (session-scoped cleanup)
 - `stop-git` — Auto-commits all changes with conventional message (Git Autopilot)
+- `stop-merge` — Auto-merges worktree branch back and cleans up
 
 **Optional (4):**
 - `stop-pattern-extractor` — Extracts reusable patterns from session

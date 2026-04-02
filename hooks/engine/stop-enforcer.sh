@@ -16,6 +16,7 @@ set -euo pipefail
 
 INPUT=$(cat)
 CWD=$(echo "$INPUT" | jq -r '.cwd // empty')
+SESSION_ID=$(echo "$INPUT" | jq -r '.session_id // empty')
 STOP_HOOK_ACTIVE=$(echo "$INPUT" | jq -r '.stop_hook_active // false')
 TRANSCRIPT_PATH=$(echo "$INPUT" | jq -r '.transcript_path // empty')
 
@@ -23,15 +24,11 @@ VAULT_DIR="${CWD}/vault"
 
 # Graceful exit if vault doesn't exist
 if [ ! -d "$VAULT_DIR" ]; then
-    # Clean up sentinel tracker even without vault
-    rm -rf "${CWD}/.sentinel" 2>/dev/null || true
     exit 0
 fi
 
 # Prevent infinite loop — if stop hook already fired once, let it through
 if [ "$STOP_HOOK_ACTIVE" = "true" ]; then
-    # Final cleanup on re-entry
-    rm -rf "${CWD}/.sentinel" 2>/dev/null || true
     exit 0
 fi
 
@@ -40,6 +37,10 @@ WARNINGS=""
 
 # --- 1. Check if code files were modified this session ---
 SENTINEL_DIR="${CWD}/.sentinel"
+if [ -n "$SESSION_ID" ]; then
+    SHORT_ID="${SESSION_ID:0:12}"
+    SENTINEL_DIR="${CWD}/.sentinel/sessions/${SHORT_ID}"
+fi
 MODIFIED_FILE="${SENTINEL_DIR}/modified-files.txt"
 FILES_CHANGED=""
 FILE_COUNT=0
@@ -113,8 +114,15 @@ if [ -n "$WARNINGS" ]; then
     echo -e "VAULT MAINTENANCE CHECKLIST -- please address before stopping:\n${WARNINGS}"
 fi
 
-# Clean up sentinel tracking directory
-rm -rf "${CWD}/.sentinel" 2>/dev/null || true
+# Clean up session-scoped sentinel tracking
+if [ -n "$SESSION_ID" ]; then
+    rm -rf "${CWD}/.sentinel/sessions/${SHORT_ID}" 2>/dev/null || true
+    # Clean up session registry entry
+    rm -f "${CWD}/.sentinel/sessions/${SHORT_ID}.json" 2>/dev/null || true
+else
+    # Legacy: no session_id, clean up flat .sentinel/
+    rm -f "${CWD}/.sentinel/modified-files.txt" "${CWD}/.sentinel/scope-warned" 2>/dev/null || true
+fi
 
 # v0.1: warn only, don't block
 exit 0

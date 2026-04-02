@@ -12,8 +12,14 @@ set -euo pipefail
 
 INPUT=$(cat)
 CWD=$(echo "$INPUT" | jq -r '.cwd // empty')
+SESSION_ID=$(echo "$INPUT" | jq -r '.session_id // empty')
 
+# Use session-scoped directory if session_id available
 SENTINEL_DIR="${CWD}/.sentinel"
+if [ -n "$SESSION_ID" ]; then
+    SHORT_ID="${SESSION_ID:0:12}"
+    SENTINEL_DIR="${CWD}/.sentinel/sessions/${SHORT_ID}"
+fi
 
 # Skip if sentinel tracker doesn't exist yet (early in session)
 if [ ! -d "$SENTINEL_DIR" ]; then

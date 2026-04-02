@@ -4,6 +4,33 @@ All notable changes to Sentinel will be documented in this file.
 
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.0] - 2026-04-02
+
+### Added
+
+- **Concurrent session isolation** — Auto-worktree isolation when multiple agents work on the same repo
+  - `session-start-isolate.sh` — Detects concurrent Claude Code sessions in the same repo via `~/.claude/sessions/*.json` PID files
+    - If concurrent session found: creates a git worktree at `.claude/worktrees/sentinel-<session-id>/`
+    - Outputs instructions telling Claude to work in the isolated copy
+    - Symlinks `node_modules` to avoid disk bloat
+    - Copies files listed in `.worktreeinclude` (e.g., `.env` files)
+    - Registers session in `.sentinel/sessions/`
+  - `stop-merge.sh` — Auto-merges worktree branch back into base branch when session ends
+    - Commits any remaining uncommitted changes
+    - Merges worktree branch into base branch
+    - For vault conflicts: keeps incoming (worktree) version (vault entries are additive)
+    - Cleans up worktree directory and temporary branch
+    - Cleans up session registry
+  - Session-scoped `.sentinel/` namespacing — each session tracks its own modified files and scope warnings in `.sentinel/sessions/<id>/`, preventing cross-session interference
+
+### Changed
+
+- `session-start-git.sh` — Now worktree-aware; skips branch creation if session is already isolated in a worktree
+- `post-tool-tracker.sh` — Uses session-scoped tracking directory (`.sentinel/sessions/<id>/modified-files.txt`)
+- `pre-tool-scope.sh` — Uses session-scoped scope warnings (`.sentinel/sessions/<id>/scope-warned`)
+- `stop-enforcer.sh` — Cleans up session-scoped data instead of nuking entire `.sentinel/` directory; safe for concurrent sessions
+- Hook count increased from 15 to 17 (13 core + 4 optional)
+
 ## [0.3.0] - 2026-04-02
 
 ### Added

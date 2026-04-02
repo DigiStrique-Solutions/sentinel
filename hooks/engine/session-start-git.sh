@@ -12,12 +12,28 @@ set -euo pipefail
 
 INPUT=$(cat)
 CWD=$(echo "$INPUT" | jq -r '.cwd // empty')
+SESSION_ID=$(echo "$INPUT" | jq -r '.session_id // empty')
 
 [ -z "$CWD" ] && exit 0
 
 # Only act inside git repos
 if ! git -C "$CWD" rev-parse --is-inside-work-tree &>/dev/null; then
     exit 0
+fi
+
+# Skip if this session is already in a worktree (session-start-isolate handled branching)
+REPO_ROOT=$(git -C "$CWD" rev-parse --show-toplevel 2>/dev/null || echo "$CWD")
+if [ -n "$SESSION_ID" ]; then
+    SHORT_ID="${SESSION_ID:0:12}"
+    SESSION_FILE="${REPO_ROOT}/.sentinel/sessions/${SHORT_ID}.json"
+    if [ -f "$SESSION_FILE" ]; then
+        IS_WORKTREE=$(jq -r '.worktree // false' "$SESSION_FILE" 2>/dev/null || echo "false")
+        if [ "$IS_WORKTREE" = "true" ]; then
+            WORKTREE_BRANCH=$(jq -r '.worktree_branch // empty' "$SESSION_FILE" 2>/dev/null || echo "")
+            echo "GIT AUTOPILOT: Working in isolated worktree on branch '${WORKTREE_BRANCH}'. Commits will happen automatically when you're done."
+            exit 0
+        fi
+    fi
 fi
 
 CURRENT_BRANCH=$(git -C "$CWD" branch --show-current 2>/dev/null || echo "")
