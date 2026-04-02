@@ -61,6 +61,11 @@
             "type": "command",
             "command": "\"${CLAUDE_PLUGIN_ROOT}/hooks/optional/post-tool-design-check.sh\"",
             "timeout": 3000
+          },
+          {
+            "type": "command",
+            "command": "\"${CLAUDE_PLUGIN_ROOT}/hooks/engine/post-tool-impact.sh\"",
+            "timeout": 5000
           }
         ]
       },
@@ -97,6 +102,11 @@
             "type": "command",
             "command": "\"${CLAUDE_PLUGIN_ROOT}/hooks/optional/prompt-vault-search.sh\"",
             "timeout": 5000
+          },
+          {
+            "type": "command",
+            "command": "\"${CLAUDE_PLUGIN_ROOT}/hooks/engine/prompt-bugfix-detect.sh\"",
+            "timeout": 3000
           }
         ]
       }

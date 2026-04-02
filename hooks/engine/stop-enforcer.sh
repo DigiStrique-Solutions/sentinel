@@ -196,6 +196,73 @@ if [ -n "$FILES_CHANGED" ] && [ "$FILE_COUNT" -gt 0 ]; then
     fi
 fi
 
+# --- 6b. RED-GREEN-BREADTH verification pattern ---
+# For bug fixes, check that: (1) a test failed BEFORE the first edit (reproduce),
+# (2) tests passed after the fix, (3) test scope was broad enough.
+# This catches the #1 verification gap: narrow fix + narrow test = "done" but user finds new bugs.
+BUGFIX_MODE_FILE="${SENTINEL_DIR}/mode-bugfix"
+if [ -f "$EVIDENCE_FILE" ] && [ -n "$FILES_CHANGED" ]; then
+    # Check test BREADTH — narrow test scope is a warning
+    # Narrow: only ran a single test file/function (e.g., pytest tests/test_one.py::test_specific)
+    # Broad: ran a directory or module (e.g., pytest tests/, yarn test)
+    NARROW_TESTS=0
+    BROAD_TESTS=0
+    while IFS= read -r line; do
+        CMD=$(echo "$line" | cut -d'|' -f4)
+        # Narrow: contains :: (pytest specific test) or ends with a specific test file
+        if echo "$CMD" | grep -qE '::|--grep|--filter|-t [^ ]+$'; then
+            NARROW_TESTS=$((NARROW_TESTS + 1))
+        else
+            BROAD_TESTS=$((BROAD_TESTS + 1))
+        fi
+    done < <(grep '|test:.*|pass' "$EVIDENCE_FILE" 2>/dev/null || true)
+
+    if [ "$NARROW_TESTS" -gt 0 ] && [ "$BROAD_TESTS" -eq 0 ] && [ "$FILE_COUNT" -gt 1 ]; then
+        WARNINGS="${WARNINGS}\n- [ ] **NARROW TEST SCOPE** — Only targeted tests were run. Consider running the full test suite to catch regressions in adjacent code."
+    fi
+
+    # Bug-fix mode: check for RED-GREEN pattern (reproduce-first)
+    if [ -f "$BUGFIX_MODE_FILE" ]; then
+        # Check if a test FAILED before the first source edit
+        FIRST_EDIT_TIME=""
+        if [ -f "$MODIFIED_FILE" ]; then
+            # Get the modification time of the tracking file (proxy for first edit)
+            if [[ "$OSTYPE" == "darwin"* ]]; then
+                FIRST_EDIT_TIME=$(stat -f %m "$MODIFIED_FILE" 2>/dev/null || echo "")
+            else
+                FIRST_EDIT_TIME=$(stat -c %Y "$MODIFIED_FILE" 2>/dev/null || echo "")
+            fi
+        fi
+
+        # Check for RED phase: any test failure in the evidence log
+        FIRST_FAIL_LINE=$(grep -n '|test:.*|fail' "$EVIDENCE_FILE" 2>/dev/null | head -1 | cut -d: -f1 || true)
+        FIRST_PASS_LINE=$(grep -n '|test:.*|pass' "$EVIDENCE_FILE" 2>/dev/null | head -1 | cut -d: -f1 || true)
+
+        if [ -z "$FIRST_FAIL_LINE" ]; then
+            WARNINGS="${WARNINGS}\n- [ ] **NO REPRODUCE STEP** — This appears to be a bug fix, but no failing test was recorded before the fix. Consider reproducing the bug with a failing test first."
+        elif [ -n "$FIRST_PASS_LINE" ] && [ "${FIRST_FAIL_LINE:-999}" -gt "${FIRST_PASS_LINE:-0}" ]; then
+            # First test was a pass, fail came later — might be normal TDD, not a concern
+            :
+        fi
+    fi
+
+    # Check for IMPACTED tests that were not run
+    IMPACT_FILE="${SENTINEL_DIR}/impact-tests.txt"
+    if [ -f "$IMPACT_FILE" ]; then
+        UNRUN_IMPACTS=""
+        while IFS= read -r impact_test; do
+            [ -z "$impact_test" ] && continue
+            # Check if this test file appears in any evidence log test command
+            if ! grep -q "$(basename "$impact_test")" "$EVIDENCE_FILE" 2>/dev/null; then
+                UNRUN_IMPACTS="${UNRUN_IMPACTS}\n    - ${impact_test}"
+            fi
+        done < "$IMPACT_FILE"
+        if [ -n "$UNRUN_IMPACTS" ]; then
+            WARNINGS="${WARNINGS}\n- [ ] **IMPACTED TESTS NOT RUN** — These test files import modified code but were not executed:${UNRUN_IMPACTS}"
+        fi
+    fi
+fi
+
 # --- 7. Clean up old session recovery files ---
 if [ -d "${VAULT_DIR}/session-recovery" ]; then
     # Compaction recovery files: delete after 4 hours

@@ -14,6 +14,8 @@ Sentinel is a Claude Code plugin that gives your AI assistant **institutional me
 
 **Verification, Not Trust** — Claude can claim "tests pass" without running them, or say "all done" with tasks still pending. Sentinel catches both. An evidence log records every test/lint/build command with its actual exit status — Claude can't retroactively claim success. A todo mirror tracks task state independently — if tasks are incomplete at session end, they're listed. The stop hook audits evidence against what should have happened: "5 Python files modified, 0 test executions found."
 
+**Verification Gap Detection** — Claude fixes a narrow symptom and writes a narrow test — but the user finds new bugs in the browser. Sentinel catches this with three checks: (1) test scope breadth — warns when only a single test function was run but multiple files changed, (2) adjacent test detection — finds test files that import modified modules and warns if they weren't executed, (3) bug-fix mode — detects bug-fix tasks and enforces reproduce-first verification (a failing test should precede the fix).
+
 **Loop & Batch Execution** — Some tasks are too large for one context window. `/sentinel loop` runs a task repeatedly until a condition is met (fix all lint errors, get tests passing, tune prompts). `/sentinel batch` breaks a massive task into work items and processes each with isolated sub-agents — generate codemaps for a 500K-line repo, migrate hundreds of files, bulk-add documentation. Both track progress to disk and are resumable.
 
 **Context Optimization** — Sentinel minimizes its own context footprint. Workflow references use progressive disclosure (loaded on demand, not eagerly). The session-start loader operates within a configurable token budget, loading vault entries in priority order and filtering gotchas by relevance to recently changed code. `/sentinel context` audits all context sources (CLAUDE.md, rules, MCP servers, plugins, hooks, vault) with token estimates and actionable recommendations.
@@ -100,9 +102,9 @@ Next session starts → better context loaded
 
 ## What's Included
 
-### Hooks (19)
+### Hooks (21)
 
-**Core (15):**
+**Core (17):**
 - `session-start-isolate` — Detects concurrent sessions, auto-creates worktrees for isolation
 - `session-start-git` — Auto-creates branch if on main/master (Git Autopilot)
 - `session-start-loader` — Loads vault context (investigations, gotchas, recovery)
@@ -114,6 +116,8 @@ Next session starts → better context loaded
 - `post-tool-test-watch` — Reminds to run tests after code changes
 - `post-tool-evidence` — Logs verification commands (test/lint/build) with pass/fail status
 - `post-tool-todo-mirror` — Mirrors TodoWrite state for independent completeness checking
+- `post-tool-impact` — Detects test files impacted by source edits for regression checking
+- `prompt-bugfix-detect` — Detects bug-fix tasks and enables stricter reproduce-first verification
 - `pre-compact-save` — Saves session context before compaction
 - `stop-enforcer` — Enforces quality gates at session end (session-scoped cleanup)
 - `stop-git` — Auto-commits all changes with conventional message (Git Autopilot)

@@ -191,6 +191,90 @@ src/models.py"
 
 # --- Changelog check ---
 
+# --- RED-GREEN-BREADTH verification ---
+
+@test "warns on narrow test scope with multiple files modified" {
+    create_modified_files "$SENTINEL_DIR" "$SHORT_ID" "src/app.py
+src/utils.py
+src/models.py"
+    # Only narrow tests (specific test function via ::)
+    create_evidence_log "$SENTINEL_DIR" "$SHORT_ID" "10:00:00|test:python|pass|pytest tests/test_app.py::test_specific_fix
+10:01:00|lint:python|pass|ruff check src/"
+    run_hook "$HOOK" cwd="$PROJECT_DIR" session_id="$SESSION_ID"
+    assert_success
+    assert_output --partial "NARROW TEST SCOPE"
+}
+
+@test "no narrow scope warning when broad tests run" {
+    create_modified_files "$SENTINEL_DIR" "$SHORT_ID" "src/app.py
+src/utils.py"
+    create_evidence_log "$SENTINEL_DIR" "$SHORT_ID" "10:00:00|test:python|pass|pytest tests/
+10:01:00|lint:python|pass|ruff check src/"
+    run_hook "$HOOK" cwd="$PROJECT_DIR" session_id="$SESSION_ID"
+    assert_success
+    refute_output --partial "NARROW TEST SCOPE"
+}
+
+@test "warns no reproduce step in bugfix mode" {
+    create_modified_files "$SENTINEL_DIR" "$SHORT_ID" "src/app.py"
+    # Set bugfix mode flag
+    touch "${SENTINEL_DIR}/sessions/${SHORT_ID}/mode-bugfix"
+    # Only passing tests, no failure before fix
+    create_evidence_log "$SENTINEL_DIR" "$SHORT_ID" "10:00:00|test:python|pass|pytest tests/"
+    run_hook "$HOOK" cwd="$PROJECT_DIR" session_id="$SESSION_ID"
+    assert_success
+    assert_output --partial "NO REPRODUCE STEP"
+}
+
+@test "no reproduce warning when RED-GREEN pattern present" {
+    create_modified_files "$SENTINEL_DIR" "$SHORT_ID" "src/app.py"
+    touch "${SENTINEL_DIR}/sessions/${SHORT_ID}/mode-bugfix"
+    # Fail first (reproduce), then pass (fix verified)
+    create_evidence_log "$SENTINEL_DIR" "$SHORT_ID" "10:00:00|test:python|fail:1|pytest tests/
+10:05:00|test:python|pass|pytest tests/
+10:06:00|lint:python|pass|ruff check src/"
+    run_hook "$HOOK" cwd="$PROJECT_DIR" session_id="$SESSION_ID"
+    assert_success
+    refute_output --partial "NO REPRODUCE STEP"
+}
+
+@test "no reproduce warning when not in bugfix mode" {
+    create_modified_files "$SENTINEL_DIR" "$SHORT_ID" "src/app.py"
+    # No bugfix flag — should skip reproduce check
+    create_evidence_log "$SENTINEL_DIR" "$SHORT_ID" "10:00:00|test:python|pass|pytest tests/"
+    run_hook "$HOOK" cwd="$PROJECT_DIR" session_id="$SESSION_ID"
+    assert_success
+    refute_output --partial "NO REPRODUCE STEP"
+}
+
+@test "warns about impacted tests not run" {
+    create_modified_files "$SENTINEL_DIR" "$SHORT_ID" "src/auth.py"
+    # Impact file says test_integration.py should be run
+    mkdir -p "${SENTINEL_DIR}/sessions/${SHORT_ID}"
+    echo "/project/tests/test_integration.py" > "${SENTINEL_DIR}/sessions/${SHORT_ID}/impact-tests.txt"
+    # Evidence shows only test_auth.py was run
+    create_evidence_log "$SENTINEL_DIR" "$SHORT_ID" "10:00:00|test:python|pass|pytest tests/test_auth.py
+10:01:00|lint:python|pass|ruff check src/"
+    run_hook "$HOOK" cwd="$PROJECT_DIR" session_id="$SESSION_ID"
+    assert_success
+    assert_output --partial "IMPACTED TESTS NOT RUN"
+    assert_output --partial "test_integration.py"
+}
+
+@test "no impact warning when all impacted tests were run" {
+    create_modified_files "$SENTINEL_DIR" "$SHORT_ID" "src/auth.py"
+    mkdir -p "${SENTINEL_DIR}/sessions/${SHORT_ID}"
+    echo "/project/tests/test_auth.py" > "${SENTINEL_DIR}/sessions/${SHORT_ID}/impact-tests.txt"
+    # Evidence shows test_auth.py was run
+    create_evidence_log "$SENTINEL_DIR" "$SHORT_ID" "10:00:00|test:python|pass|pytest tests/test_auth.py
+10:01:00|lint:python|pass|ruff check src/"
+    run_hook "$HOOK" cwd="$PROJECT_DIR" session_id="$SESSION_ID"
+    assert_success
+    refute_output --partial "IMPACTED TESTS NOT RUN"
+}
+
+# --- Changelog check ---
+
 @test "skips changelog check for 2 or fewer files" {
     create_modified_files "$SENTINEL_DIR" "$SHORT_ID" "src/app.py
 src/utils.py"

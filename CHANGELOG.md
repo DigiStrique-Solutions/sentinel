@@ -4,6 +4,29 @@ All notable changes to Sentinel will be documented in this file.
 
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.10.0] - 2026-04-02
+
+### Added
+
+- **Verification gap detection** — Three-layer system to catch the #1 AI coding failure: narrow fix passes its own test but breaks adjacent functionality
+  - **RED-GREEN-BREADTH check** (Stop hook) — At session end, checks the evidence log for:
+    - Test scope breadth: warns when only targeted tests (e.g., `pytest test_file.py::test_one`) were run but multiple files were modified
+    - Reproduce-first pattern: in bug-fix mode, warns if no failing test preceded the fix
+    - Impacted test coverage: warns if tests that import modified modules were never executed
+  - **Adjacent test detection** (`post-tool-impact.sh`) — When a source file is edited, greps test directories for files that import the modified module. Stores the impact list for the Stop hook to verify
+  - **Bug-fix mode detection** (`prompt-bugfix-detect.sh`) — Detects bug-fix tasks from prompt keywords ("fix", "bug", "broken", "crash", "regression") or branch name (`fix/`, `bugfix/`, `hotfix/`). Enables stricter reproduce-first verification
+
+- **BATS test suite** — 157 tests across 11 test files covering all high-risk hooks and scripts
+  - Tests found and fixed 5 additional bugs during development (grep -c subshell, detect-drift output loss)
+  - Uses bats-support, bats-assert, bats-file helper libraries (git submodules)
+  - Test files: session-start-loader, stop-enforcer, session-start-prune, post-tool-evidence, session-start-isolate, stop-git, stop-merge, check-facts, detect-drift, post-tool-impact, prompt-bugfix-detect
+
+### Changed
+
+- `hooks.json` — Added `post-tool-impact.sh` (PostToolUse on Edit/Write/MultiEdit) and `prompt-bugfix-detect.sh` (Prompt)
+- `stop-enforcer.sh` — Added RED-GREEN-BREADTH verification section (section 6b)
+- Hook count increased from 19 to 21 (17 core + 4 optional)
+
 ## [0.9.1] - 2026-04-02
 
 ### Fixed
