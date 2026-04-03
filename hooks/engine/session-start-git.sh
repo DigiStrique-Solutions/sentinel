@@ -43,7 +43,15 @@ if [ "$CURRENT_BRANCH" = "main" ] || [ "$CURRENT_BRANCH" = "master" ] || [ -z "$
     TIMESTAMP=$(date +%Y-%m-%d-%H%M)
     NEW_BRANCH="sentinel/${TIMESTAMP}"
 
-    git -C "$CWD" checkout -b "$NEW_BRANCH" --quiet 2>/dev/null
+    # If branch already exists (two sessions in the same minute), append short session ID
+    if git -C "$CWD" show-ref --verify --quiet "refs/heads/${NEW_BRANCH}" 2>/dev/null; then
+        NEW_BRANCH="sentinel/${TIMESTAMP}-${SHORT_ID:-$$}"
+    fi
+
+    if ! git -C "$CWD" checkout -b "$NEW_BRANCH" --quiet 2>/dev/null; then
+        echo "GIT AUTOPILOT: Could not create branch '${NEW_BRANCH}'. Staying on current branch."
+        exit 0
+    fi
 
     # Log branch creation to activity feed
     PLUGIN_LOGGER="$(dirname "$0")/activity-logger.sh"

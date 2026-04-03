@@ -41,12 +41,12 @@ fi
 # Standard merge failed — use concatenation strategy
 rm -f "${OURS}.merged" 2>/dev/null || true
 
-# Extract the header (first line starting with #) from ours
-HEADER=$(head -1 "$OURS")
+# Extract the title (first line starting with #) from ours
+HEADER=$(grep -m 1 '^# ' "$OURS" || head -1 "$OURS")
 
-# Get content lines (skip header and empty lines after it) from both
-OURS_CONTENT=$(tail -n +2 "$OURS" | sed '/^$/d; /^#/d')
-THEIRS_CONTENT=$(tail -n +2 "$THEIRS" | sed '/^$/d; /^#/d')
+# Get content lines — skip only the first # title, preserve all ## and ### headings
+OURS_CONTENT=$(awk 'BEGIN{found=0} /^# / && !found {found=1; next} {print}' "$OURS" | sed '/^$/d')
+THEIRS_CONTENT=$(awk 'BEGIN{found=0} /^# / && !found {found=1; next} {print}' "$THEIRS" | sed '/^$/d')
 
 # Build the merged file
 {

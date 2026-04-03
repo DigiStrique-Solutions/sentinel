@@ -44,20 +44,27 @@ fi
 # This prevents blocking session start if the vault is large
 (
     # Use timeout command if available, otherwise use a subshell with kill
+    BUILD_SUCCESS=false
     if command -v timeout &>/dev/null; then
-        timeout 3 bash "$INDEX_SCRIPT" "$VAULT_DIR" > /dev/null 2>&1
+        if timeout 3 bash "$INDEX_SCRIPT" "$VAULT_DIR" > /dev/null 2>&1; then
+            BUILD_SUCCESS=true
+        fi
     else
         bash "$INDEX_SCRIPT" "$VAULT_DIR" > /dev/null 2>&1 &
         BUILD_PID=$!
         ( sleep 3; kill "$BUILD_PID" 2>/dev/null ) &
         WATCHDOG=$!
-        wait "$BUILD_PID" 2>/dev/null || true
+        if wait "$BUILD_PID" 2>/dev/null; then
+            BUILD_SUCCESS=true
+        fi
         kill "$WATCHDOG" 2>/dev/null || true
         wait "$WATCHDOG" 2>/dev/null || true
     fi
 
-    # Remove stale marker on success
-    rm -f "$STALE_MARKER" 2>/dev/null || true
+    # Only remove stale marker if build succeeded — failed/timed-out builds should retry
+    if [ "$BUILD_SUCCESS" = "true" ]; then
+        rm -f "$STALE_MARKER" 2>/dev/null || true
+    fi
 ) &
 
 # Don't wait for the background process — let session start proceed

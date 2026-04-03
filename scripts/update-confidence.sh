@@ -31,7 +31,8 @@ THIRTY_DAYS=$((30 * 24 * 60 * 60))
 echo "=== Pattern Confidence Report ==="
 echo ""
 
-find "$PATTERN_DIR" -name "*.md" -type f 2>/dev/null | sort | while read -r filepath; do
+# Use process substitution (not pipe) to avoid subshell variable loss
+while read -r filepath; do
     filename=$(basename "$filepath" .md)
     TOTAL=$((TOTAL + 1))
 
@@ -48,7 +49,8 @@ find "$PATTERN_DIR" -name "*.md" -type f 2>/dev/null | sort | while read -r file
 
     # Check if pattern should be promoted (references >= 5)
     if [ "$references" -ge 5 ]; then
-        if [ "$(echo "$confidence < 0.9" | bc)" -eq 1 ]; then
+        # Use awk for float comparison (bc may not be available)
+        if awk "BEGIN {exit ($confidence >= 0.9) ? 1 : 0}"; then
             NEW_CONF="0.9"
             PROMOTED=$((PROMOTED + 1))
             echo "PROMOTED: ${filename} (${references} references, confidence ${confidence} -> ${NEW_CONF})"
@@ -82,7 +84,7 @@ find "$PATTERN_DIR" -name "*.md" -type f 2>/dev/null | sort | while read -r file
             fi
         fi
     fi
-done
+done < <(find "$PATTERN_DIR" -name "*.md" -type f 2>/dev/null | sort)
 
 echo ""
 echo "=== Summary ==="

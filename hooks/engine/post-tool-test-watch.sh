@@ -43,8 +43,13 @@ if [ -z "$EXIT_CODE" ]; then
     fi
 fi
 
-# Track consecutive failures
+# Track consecutive failures (session-scoped to avoid cross-session interference)
+SESSION_ID=$(echo "$INPUT" | jq -r '.session_id // empty')
 SENTINEL_DIR="${CWD}/.sentinel"
+if [ -n "$SESSION_ID" ]; then
+    SHORT_ID="${SESSION_ID:0:12}"
+    SENTINEL_DIR="${CWD}/.sentinel/sessions/${SHORT_ID}"
+fi
 mkdir -p "$SENTINEL_DIR"
 FAILURE_COUNTER="${SENTINEL_DIR}/test-failure-count.txt"
 

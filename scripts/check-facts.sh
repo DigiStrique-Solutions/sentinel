@@ -78,7 +78,13 @@ process_check() {
         CLAIMED=$(grep -oE "$CURRENT_PATTERN" "$CLAUDE_MD" 2>/dev/null | head -1 | grep -oE '^[0-9]+' || echo "0")
         if [ "$CLAIMED" -gt 0 ]; then
             # Run the count command from the project root
-            ACTUAL=$(cd "$PROJECT_ROOT" && eval "$CURRENT_COMMAND" 2>/dev/null | tr -d ' ' || echo "0")
+            # Only allow commands starting with safe prefixes (read-only operations)
+            if echo "$CURRENT_COMMAND" | grep -qE '^[[:space:]]*(grep|find|wc|ls|cat|count|awk|sed|echo|printf|expr) '; then
+                ACTUAL=$(cd "$PROJECT_ROOT" && eval "$CURRENT_COMMAND" 2>/dev/null | tr -d ' ' || echo "0")
+            else
+                # Reject commands that don't look like count operations
+                ACTUAL="0"
+            fi
             if [ "$ACTUAL" -gt 0 ]; then
                 check_count "$CURRENT_DESC" "$CLAIMED" "$ACTUAL"
             fi

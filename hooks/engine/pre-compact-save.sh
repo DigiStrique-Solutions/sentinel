@@ -41,17 +41,17 @@ if [ -n "$TRANSCRIPT_PATH" ] && [ -f "$TRANSCRIPT_PATH" ]; then
     RECENT_CONTEXT=$(tail -200 "$TRANSCRIPT_PATH" 2>/dev/null || echo "")
 
     if [ -n "$RECENT_CONTEXT" ]; then
-        # Extract file paths that were edited
-        FILES_MODIFIED=$(echo "$RECENT_CONTEXT" | grep -oE '"file_path"\s*:\s*"[^"]*"' | sed 's/"file_path"\s*:\s*"//;s/"$//' | sort -u | head -20 || echo "")
+        # Extract file paths that were edited (use [[:space:]] for macOS sed compatibility)
+        FILES_MODIFIED=$(echo "$RECENT_CONTEXT" | grep -oE '"file_path"[[:space:]]*:[[:space:]]*"[^"]*"' | sed 's/"file_path"[[:space:]]*:[[:space:]]*"//;s/"$//' | sort -u | head -20 || echo "")
 
         # Extract tool usage counts
-        TOOL_CALLS=$(echo "$RECENT_CONTEXT" | grep -oE '"tool_name"\s*:\s*"[^"]*"' | sed 's/"tool_name"\s*:\s*"//;s/"$//' | sort | uniq -c | sort -rn | head -10 || echo "")
+        TOOL_CALLS=$(echo "$RECENT_CONTEXT" | grep -oE '"tool_name"[[:space:]]*:[[:space:]]*"[^"]*"' | sed 's/"tool_name"[[:space:]]*:[[:space:]]*"//;s/"$//' | sort | uniq -c | sort -rn | head -10 || echo "")
 
         # Extract task description (first substantial user prompt)
-        TASK_DESCRIPTION=$(echo "$RECENT_CONTEXT" | grep -oE '"content"\s*:\s*"[^"]{20,200}"' | head -1 | sed 's/"content"\s*:\s*"//;s/"$//' || echo "")
+        TASK_DESCRIPTION=$(echo "$RECENT_CONTEXT" | grep -oE '"content"[[:space:]]*:[[:space:]]*"[^"]{20,200}"' | head -1 | sed 's/"content"[[:space:]]*:[[:space:]]*"//;s/"$//' || echo "")
 
         # Extract most recent TodoWrite state
-        TODO_STATE=$(echo "$RECENT_CONTEXT" | grep -oE '"todos"\s*:\s*\[[^]]*\]' | tail -1 | head -c 500 || echo "")
+        TODO_STATE=$(echo "$RECENT_CONTEXT" | grep -oE '"todos"[[:space:]]*:[[:space:]]*\[[^]]*\]' | tail -1 | head -c 500 || echo "")
     fi
 fi
 
