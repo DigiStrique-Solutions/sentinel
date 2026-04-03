@@ -142,7 +142,26 @@ The evidence is captured by hooks that observe actual command execution — not 
 
 ---
 
-### 4. Claude fixes the symptom but breaks adjacent code
+### 4. Claude claims it wrote a file but the file doesn't exist
+
+**The problem:** You ask Claude to create a new component. It says "I've created `src/components/Dashboard.tsx` with the following code..." and shows you the code. You move on to the next task. Later, you try to import the component and get a "module not found" error. The file was never actually written to disk. This is the "ghost file" bug — one of the most reported Claude Code issues.
+
+**What Sentinel does:** At session end, Sentinel reads the list of files Claude claimed to modify and checks each one against the filesystem. If a file was reported as written but doesn't exist on disk, it's flagged as a ghost file.
+
+**What you see:**
+
+```
+- [ ] GHOST FILES DETECTED — These files were reported as modified but do not exist on disk:
+    - src/components/Dashboard.tsx
+    - src/hooks/useDashboard.ts
+  Claude may have hallucinated these writes. Verify the intended changes were actually saved.
+```
+
+You catch the missing files immediately instead of discovering them hours later when an import fails.
+
+---
+
+### 5. Claude fixes the symptom but breaks adjacent code
 
 **The problem:** You report a bug in the login flow. Claude fixes it and writes a test for the exact scenario you described. The test passes. You open the browser, try logging in — it works. Then you try logging out and the app crashes. Claude fixed the narrow symptom but never checked whether the fix broke anything nearby.
 
@@ -170,7 +189,7 @@ The evidence is captured by hooks that observe actual command execution — not 
 
 ---
 
-### 5. Claude writes tests that test the mock, not the code
+### 6. Claude writes tests that test the mock, not the code
 
 **The problem:** You ask Claude to add tests for a service. It creates a test file, mocks the service, and asserts the mock was called. The test passes — but it would pass even if you deleted the entire service. The test is testing the mock setup, not the actual code. This is the most common test quality failure in AI-generated code.
 
@@ -198,7 +217,7 @@ Claude sees this before writing tests and avoids the pattern. If it still writes
 
 ---
 
-### 6. Claude tries a fix that already failed last week
+### 7. Claude tries a fix that already failed last week
 
 **The problem:** A bug keeps resurfacing. Each time, Claude tries the same obvious approach, hits the same wall, and wastes 30 minutes before discovering the approach doesn't work. There's no record of past debugging sessions.
 
@@ -235,7 +254,7 @@ When an investigation is resolved, Sentinel automatically moves it to `vault/inv
 
 ---
 
-### 7. Claude gets stuck in a loop, wasting hundreds of API calls
+### 8. Claude gets stuck in a loop, wasting hundreds of API calls
 
 **The problem:** Claude tries to fix a build error. The fix introduces a new error. Claude fixes that, which reintroduces the first error. This cycles for 50+ iterations, burning through your API quota while making zero progress. The leaked Claude Code source data showed sessions with up to 3,272 consecutive failures — globally, ~250,000 API calls per day were wasted on these spirals.
 
@@ -270,7 +289,7 @@ No more burning through your API quota on the same error 50 times.
 
 ---
 
-### 8. Multiple agents editing the same repo cause conflicts
+### 9. Multiple agents editing the same repo cause conflicts
 
 **The problem:** You're running two Claude Code sessions on the same repo — one working on the frontend, another on the backend. They both edit shared config files. When you try to commit, there are merge conflicts everywhere.
 
@@ -303,7 +322,7 @@ No manual merge conflicts. No coordination needed. You just start sessions and w
 
 ---
 
-### 9. Git is overwhelming
+### 10. Git is overwhelming
 
 **The problem:** You're a data scientist, a designer, or a student. You don't know git. You don't want to learn git. You just want to write code and have it saved properly.
 
@@ -326,7 +345,7 @@ You never run `git add`, `git commit`, `git push`, or write a commit message. It
 
 ---
 
-### 10. The task is too large for one context window
+### 11. The task is too large for one context window
 
 **The problem:** You need to generate documentation for a 500,000-line codebase, or migrate 200 files from one pattern to another, or add type annotations to every function in the project. Claude runs out of context after processing 20 files and the other 180 are untouched.
 
@@ -395,7 +414,7 @@ This usually means the remaining issues require a different approach.
 
 ---
 
-### 11. The context window fills up with irrelevant content
+### 12. The context window fills up with irrelevant content
 
 **The problem:** You have CLAUDE.md, rules, MCP servers, plugins, and vault content all competing for space in the context window. Most of it is irrelevant to the current task. A workflow you'll never use this session takes 3,000 tokens. MCP tool names you'll never invoke take another 500.
 
@@ -432,7 +451,7 @@ Recommendations:
 
 ---
 
-### 12. Documentation goes stale without anyone noticing
+### 13. Documentation goes stale without anyone noticing
 
 **The problem:** Your architecture docs reference `src/models/User.py`, but that file was renamed to `src/entities/user.py` three months ago. Your CLAUDE.md says "209 connector tools" but the actual count is now 215. Nobody noticed because nobody checks.
 
@@ -464,7 +483,7 @@ CLAUDE.md FACT CHECK — numbers may be outdated:
 
 ---
 
-### 13. Team members don't share knowledge
+### 14. Team members don't share knowledge
 
 **The problem:** Sarah debugged a tricky timezone issue on Monday and discovered a non-obvious constraint. Mike hits the same issue on Wednesday in a different part of the codebase. He spends an hour debugging before stumbling on the same solution Sarah already found.
 

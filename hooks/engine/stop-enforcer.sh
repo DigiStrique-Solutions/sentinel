@@ -101,7 +101,28 @@ if [ -f "$MODIFIED_FILE" ]; then
     fi
 fi
 
-# --- 4b. Documentation drift detection ---
+# --- 4b. Ghost file detection ---
+# Check that files Claude claims to have written actually exist on disk.
+# Catches the "ghost file hallucination" where Claude reports writing a file
+# but the write never happened (platform bug, permission error, path resolution failure).
+if [ -f "$MODIFIED_FILE" ]; then
+    GHOST_FILES=""
+    while IFS= read -r claimed_file; do
+        [ -z "$claimed_file" ] && continue
+        # Resolve relative paths against CWD
+        if [[ "$claimed_file" != /* ]]; then
+            claimed_file="${CWD}/${claimed_file}"
+        fi
+        if [ ! -f "$claimed_file" ] && [ ! -d "$claimed_file" ]; then
+            GHOST_FILES="${GHOST_FILES}\n    - ${claimed_file}"
+        fi
+    done < "$MODIFIED_FILE"
+    if [ -n "$GHOST_FILES" ]; then
+        WARNINGS="${WARNINGS}\n- [ ] **GHOST FILES DETECTED** — These files were reported as modified but do not exist on disk:${GHOST_FILES}\n  Claude may have hallucinated these writes. Verify the intended changes were actually saved."
+    fi
+fi
+
+# --- 4c. Documentation drift detection ---
 # When source files were modified, check if architecture docs reference deleted/moved files
 if [ -n "$FILES_CHANGED" ]; then
     PLUGIN_ROOT="${CLAUDE_PLUGIN_ROOT:-$(cd "$(dirname "$0")/../.." && pwd)}"

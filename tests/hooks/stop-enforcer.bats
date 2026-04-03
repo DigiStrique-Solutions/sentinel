@@ -189,6 +189,40 @@ src/models.py"
     assert_file_exist "${SENTINEL_DIR}/sessions/${SHORT_ID}.json"
 }
 
+# --- Ghost file detection ---
+
+@test "detects ghost files that dont exist on disk" {
+    # Claim files were modified but they don't exist
+    create_modified_files "$SENTINEL_DIR" "$SHORT_ID" "${PROJECT_DIR}/src/ghost.py
+${PROJECT_DIR}/src/phantom.ts"
+    run_hook "$HOOK" cwd="$PROJECT_DIR" session_id="$SESSION_ID"
+    assert_success
+    assert_output --partial "GHOST FILES DETECTED"
+    assert_output --partial "ghost.py"
+    assert_output --partial "phantom.ts"
+}
+
+@test "no ghost warning when all files exist" {
+    mkdir -p "${PROJECT_DIR}/src"
+    echo "code" > "${PROJECT_DIR}/src/real.py"
+    create_modified_files "$SENTINEL_DIR" "$SHORT_ID" "${PROJECT_DIR}/src/real.py"
+    run_hook "$HOOK" cwd="$PROJECT_DIR" session_id="$SESSION_ID"
+    assert_success
+    refute_output --partial "GHOST FILES"
+}
+
+@test "ghost detection handles mix of real and ghost files" {
+    mkdir -p "${PROJECT_DIR}/src"
+    echo "code" > "${PROJECT_DIR}/src/exists.py"
+    create_modified_files "$SENTINEL_DIR" "$SHORT_ID" "${PROJECT_DIR}/src/exists.py
+${PROJECT_DIR}/src/missing.py"
+    run_hook "$HOOK" cwd="$PROJECT_DIR" session_id="$SESSION_ID"
+    assert_success
+    assert_output --partial "GHOST FILES"
+    assert_output --partial "missing.py"
+    refute_output --partial "exists.py"
+}
+
 # --- Changelog check ---
 
 # --- RED-GREEN-BREADTH verification ---
