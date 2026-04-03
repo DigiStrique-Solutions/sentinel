@@ -223,17 +223,6 @@ if [ -f "$EVIDENCE_FILE" ] && [ -n "$FILES_CHANGED" ]; then
 
     # Bug-fix mode: check for RED-GREEN pattern (reproduce-first)
     if [ -f "$BUGFIX_MODE_FILE" ]; then
-        # Check if a test FAILED before the first source edit
-        FIRST_EDIT_TIME=""
-        if [ -f "$MODIFIED_FILE" ]; then
-            # Get the modification time of the tracking file (proxy for first edit)
-            if [[ "$OSTYPE" == "darwin"* ]]; then
-                FIRST_EDIT_TIME=$(stat -f %m "$MODIFIED_FILE" 2>/dev/null || echo "")
-            else
-                FIRST_EDIT_TIME=$(stat -c %Y "$MODIFIED_FILE" 2>/dev/null || echo "")
-            fi
-        fi
-
         # Check for RED phase: any test failure in the evidence log
         FIRST_FAIL_LINE=$(grep -n '|test:.*|fail' "$EVIDENCE_FILE" 2>/dev/null | head -1 | cut -d: -f1 || true)
         FIRST_PASS_LINE=$(grep -n '|test:.*|pass' "$EVIDENCE_FILE" 2>/dev/null | head -1 | cut -d: -f1 || true)
