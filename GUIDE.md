@@ -62,28 +62,51 @@ Claude now knows what was tried before, what didn't work, and why. It skips the 
 
 **The problem:** You're 45 minutes into a session. Claude has been following your CLAUDE.md rules perfectly — using the right patterns, avoiding anti-patterns, following your workflow. Then auto-compaction triggers. Suddenly Claude ignores your rules, uses patterns you banned, and forgets everything it was working on. Your project instructions were followed 100% before compaction and violated 100% after. This is the #2 most reported Claude Code issue.
 
-**What Sentinel does:** A pre-compaction hook saves the current session state — what files were modified, what investigations are open, what the task was — to a recovery file. When the next session starts (or the same session continues after compaction), the session-start loader picks up the recovery file and restores context. The vault itself is never affected by compaction because it's on disk, not in context.
+**What Sentinel does:** Three layers of compaction defense:
+
+1. **Before compaction** — A pre-compact hook saves the current session state (files modified, task description, todo list, open investigations) to a recovery file on disk.
+
+2. **During compaction** — A "Compact Instructions" section in your CLAUDE.md tells the summarizer which rules to preserve. This directly controls what survives the summary — check investigations before fixes, check gotchas before edits, never skip tests, 2-failure stop rule.
+
+3. **After compaction** — A post-compact reload hook fires immediately and re-injects the recovery file, active todo list, open investigations, and bugfix mode flag. It also reminds Claude to re-read CLAUDE.md.
+
+Additionally, a context pressure warning suggests manual `/compact` at 80 tool calls (configurable). Manual compaction at a logical boundary preserves more detail than auto-compact at 83% capacity.
 
 **What you see:**
 
-When compaction is about to happen:
+Before compaction:
 ```
-PRE-COMPACT: Saved session state to vault/session-recovery/2026-04-03T14-30-00.md
-  Files modified: 7
+PRE-COMPACT: Session context saved to vault/session-recovery/2026-04-03T14-30-00.md
+```
+
+After compaction fires:
+```
+COMPACTION DETECTED — Reloading critical context:
+
+POST-COMPACTION CONTEXT RECOVERY
   Task: Fixing auth redirect loop
-  Open investigation: 2026-04-03-auth-redirect.md
+  Files: src/auth/login.py, src/auth/session.py, tests/auth/test_login.py
+
+ACTIVE TASK LIST (from before compaction)
+  - [completed] Reproduce the bug with failing test
+  - [completed] Fix the redirect loop
+  - [pending] Write integration tests
+  Resume from the first incomplete task.
+
+OPEN INVESTIGATIONS (still active)
+  - 2026-04-03-auth-redirect.md
+  Check these before attempting fixes.
+
+IMPORTANT: Re-read CLAUDE.md for project rules. Compaction may have lost instructions.
 ```
 
-After compaction (or in the next session):
+Earlier in the session, before auto-compact triggers:
 ```
-PREVIOUS SESSION (incomplete work)
-  Date: 2026-04-03
-  Files modified: 7 (src/auth/*, tests/auth/*)
-  Task context: Fixing auth redirect loop
-  Open investigation: 2026-04-03-auth-redirect.md
+CONTEXT PRESSURE: 80 tool calls this session. Consider running /compact at a
+logical boundary to preserve context quality.
 ```
 
-Claude picks up where it left off. The vault knowledge (gotchas, investigations, decisions) is never lost because it was never in the context window to begin with — it's on disk.
+The vault knowledge (gotchas, investigations, decisions) is never lost because it's on disk, not in the context window.
 
 ---
 
