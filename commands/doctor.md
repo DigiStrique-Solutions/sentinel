@@ -1,5 +1,5 @@
 ---
-name: doctor
+name: sentinel doctor
 description: Diagnose and fix common Sentinel installation issues — missing files, broken hooks, stale state.
 ---
 

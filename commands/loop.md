@@ -1,5 +1,5 @@
 ---
-name: loop
+name: sentinel loop
 description: Run a task repeatedly until a completion condition is met or max iterations reached. For convergence tasks like fixing lint errors, improving test coverage, or tuning prompts.
 ---
 

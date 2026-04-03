@@ -1,5 +1,5 @@
 ---
-name: stats
+name: sentinel stats
 description: Show Sentinel effectiveness metrics — vault health, knowledge reuse, and code discipline over time.
 ---
 
