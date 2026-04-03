@@ -27,6 +27,11 @@
             "type": "command",
             "command": "\"${CLAUDE_PLUGIN_ROOT}/hooks/engine/session-start-prune.sh\"",
             "timeout": 15000
+          },
+          {
+            "type": "command",
+            "command": "\"${CLAUDE_PLUGIN_ROOT}/hooks/engine/session-start-compact-reload.sh\"",
+            "timeout": 10000
           }
         ]
       }
@@ -80,6 +85,11 @@
           {
             "type": "command",
             "command": "\"${CLAUDE_PLUGIN_ROOT}/hooks/engine/post-tool-evidence.sh\"",
+            "timeout": 3000
+          },
+          {
+            "type": "command",
+            "command": "\"${CLAUDE_PLUGIN_ROOT}/hooks/engine/post-tool-compact-suggest.sh\"",
             "timeout": 3000
           }
         ]

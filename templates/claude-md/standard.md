@@ -27,6 +27,16 @@ Read these before declaring work complete:
 | Prompt engineering | `vault/workflows/prompt-engineering.md` |
 | Research / investigation | `vault/workflows/research-spike.md` |
 
+## Compact Instructions
+
+When context is compacted, preserve these critical rules:
+- ALWAYS check `vault/investigations/` before attempting any fix — they document approaches that already failed
+- ALWAYS check `vault/gotchas/` before editing files — they document non-obvious pitfalls
+- NEVER skip tests. Run the full test suite after changes, not just targeted tests
+- NEVER claim work is done without running verification commands (test, lint, type check)
+- After 2 failed fix attempts, STOP and tell the user to start fresh
+- Read `vault/quality/gates.md` before declaring work complete
+
 ## Mandatory Behaviors
 
 ### When a fix attempt fails

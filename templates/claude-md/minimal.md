@@ -15,6 +15,14 @@ Read these before declaring work complete:
 |------|-----------|
 | Bug fix | `vault/workflows/bug-fix.md` |
 
+## Compact Instructions
+
+When context is compacted, preserve these critical rules:
+- ALWAYS check `vault/investigations/` before attempting any fix
+- ALWAYS check `vault/gotchas/` before editing files
+- NEVER claim work is done without running verification commands
+- After 2 failed fix attempts, STOP and tell the user to start fresh
+
 ## Mandatory Behaviors
 
 ### When a fix attempt fails

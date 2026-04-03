@@ -1,0 +1,6 @@
+/Users/poojan/Desktop/Projects/sentinel/.claude-plugin/plugin.json
+/Users/poojan/Desktop/Projects/sentinel/CHANGELOG.md
+/Users/poojan/Desktop/Projects/sentinel/README.md
+/Users/poojan/Desktop/Projects/sentinel/package.json
+/Users/poojan/Desktop/Projects/sentinel/tests/hooks/post-tool-compact-suggest.bats
+/Users/poojan/Desktop/Projects/sentinel/tests/hooks/session-start-compact-reload.bats

@@ -102,9 +102,9 @@ Next session starts → better context loaded
 
 ## What's Included
 
-### Hooks (21)
+### Hooks (23)
 
-**Core (17):**
+**Core (19):**
 - `session-start-isolate` — Detects concurrent sessions, auto-creates worktrees for isolation
 - `session-start-git` — Auto-creates branch if on main/master (Git Autopilot)
 - `session-start-loader` — Loads vault context (investigations, gotchas, recovery)
@@ -118,7 +118,9 @@ Next session starts → better context loaded
 - `post-tool-todo-mirror` — Mirrors TodoWrite state for independent completeness checking
 - `post-tool-impact` — Detects test files impacted by source edits for regression checking
 - `prompt-bugfix-detect` — Detects bug-fix tasks and enables stricter reproduce-first verification
+- `post-tool-compact-suggest` — Suggests manual /compact before auto-compact triggers
 - `pre-compact-save` — Saves session context before compaction
+- `session-start-compact-reload` — Re-injects critical context after compaction
 - `stop-enforcer` — Enforces quality gates at session end (session-scoped cleanup)
 - `stop-git` — Auto-commits all changes with conventional message (Git Autopilot)
 - `stop-merge` — Auto-merges worktree branch back and cleans up

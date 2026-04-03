@@ -4,6 +4,26 @@ All notable changes to Sentinel will be documented in this file.
 
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.12.0] - 2026-04-03
+
+### Added
+
+- **Post-compact context reload** (`session-start-compact-reload.sh`) — When auto-compaction triggers, this hook fires on `SessionStart` with `source="compact"` and re-injects critical context:
+  - Most recent session recovery file (saved by pre-compact hook moments earlier)
+  - Active todo list state (task completion tracking)
+  - Open investigations (highest-priority vault content)
+  - Bug-fix mode flag (if active)
+  - Reminder to re-read CLAUDE.md (instructions often lost during compaction)
+
+- **Compact Instructions section** in all 3 CLAUDE.md templates — Directly controls what the Claude Code summarizer preserves during compaction. Lists the most critical rules (check investigations, check gotchas, run tests, 2-failure stop rule) that must survive context summarization.
+
+- **Context pressure warning** (`post-tool-compact-suggest.sh`) — Tracks tool call count per session. At 80 calls (configurable via `.sentinel/config.json`), suggests manual `/compact` at a logical boundary. Manual compaction at 60-70% context preserves more detail than auto-compact at 83%. Only suggests once per session to avoid nagging.
+
+### Changed
+
+- Hook count increased from 21 to 23 (19 core + 4 optional)
+- Test count increased from 159 to 181 (added 22 tests for compaction hooks)
+
 ## [0.11.0] - 2026-04-02
 
 ### Added
