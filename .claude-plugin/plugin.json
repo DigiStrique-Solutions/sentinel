@@ -1,6 +1,6 @@
 {
   "name": "sentinel",
-  "version": "0.12.0",
+  "version": "0.12.1",
   "description": "Self-improving development methodology for Claude Code. Institutional memory, quality enforcement, and continuous learning.",
   "author": {
     "name": "Poojan Ajani"

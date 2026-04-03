@@ -131,8 +131,9 @@ Next session starts → better context loaded
 - `prompt-vault-search` — Searches vault for relevant context on user prompts
 - `post-tool-design-check` — Reminds to run design review after frontend edits
 
-### Skills (6)
+### Skills (7)
 
+- `brainstorm` — Structured exploration before implementation (context, clarify, propose, spec)
 - `sentinel-methodology` — Core methodology (investigations, self-healing, gates)
 - `quality-patterns` — Anti-patterns and test standards
 - `tdd` — Test-driven development enforcement

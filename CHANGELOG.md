@@ -4,6 +4,17 @@ All notable changes to Sentinel will be documented in this file.
 
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.12.1] - 2026-04-03
+
+### Added
+
+- **Brainstorm skill** — Structured exploration before implementation. Prevents Claude from jumping to code before understanding intent. Five phases: understand context → clarify intent (one question at a time) → propose 2-3 approaches with trade-offs → write spec → transition to execution workflow. Integrates with new-feature, feature-improvement, and refactor workflows.
+- **Ghost file detection** — stop-enforcer checks files Claude claims to have written actually exist on disk. Catches the "ghost file hallucination" where Claude reports writing a file but the write never happened.
+
+### Changed
+
+- Skill count increased from 6 to 7 (added brainstorm)
+
 ## [0.12.0] - 2026-04-03
 
 ### Added
