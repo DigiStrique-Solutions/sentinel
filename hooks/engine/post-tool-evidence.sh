@@ -80,10 +80,11 @@ else
         COMBINED=$(echo "$TOOL_OUTPUT" | tail -30)
     fi
 
-    if echo "$COMBINED" | grep -qiE '(FAILED|ERRORS?[^:]*$|failures?|Exit code: [1-9]|FAIL |error TS|SyntaxError|ModuleNotFoundError)'; then
-        STATUS="fail"
-    elif echo "$COMBINED" | grep -qiE '(passed|success|✓|✔|0 errors|no issues|All checks passed)'; then
+    # Check pass patterns FIRST — prevents "0 errors" from matching the fail regex
+    if echo "$COMBINED" | grep -qiE '(passed|success|✓|✔|0 errors|no issues|All checks passed)'; then
         STATUS="pass"
+    elif echo "$COMBINED" | grep -qiE '(FAILED|[1-9][0-9]* errors?|failures?|Exit code: [1-9]|FAIL |error TS|SyntaxError|ModuleNotFoundError)'; then
+        STATUS="fail"
     fi
 fi
 

@@ -169,6 +169,30 @@ get_evidence() {
     [[ "$evidence" == *"|pass|"* ]]
 }
 
+@test "output '0 errors' is pass not fail" {
+    run_hook "$HOOK" \
+        cwd="$PROJECT_DIR" \
+        session_id="$SESSION_ID" \
+        command="ruff check src/" \
+        stdout="All checks passed! 0 errors found."
+    assert_success
+    local evidence
+    evidence=$(get_evidence)
+    [[ "$evidence" == *"|pass|"* ]]
+}
+
+@test "output '3 errors' is fail" {
+    run_hook "$HOOK" \
+        cwd="$PROJECT_DIR" \
+        session_id="$SESSION_ID" \
+        command="ruff check src/" \
+        stdout="Found 3 errors."
+    assert_success
+    local evidence
+    evidence=$(get_evidence)
+    [[ "$evidence" == *"|fail|"* ]]
+}
+
 # --- Log format ---
 
 @test "log line format is TIMESTAMP|CATEGORY|STATUS|COMMAND" {
