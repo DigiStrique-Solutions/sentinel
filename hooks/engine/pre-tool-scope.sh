@@ -31,8 +31,8 @@ if [ -f "${SENTINEL_DIR}/scope-warned" ]; then
     exit 0
 fi
 
-# Skip if a TodoWrite checklist is active
-if [ -f "${SENTINEL_DIR}/todo-active" ]; then
+# Skip if a TodoWrite checklist is active (written by post-tool-todo-mirror.sh)
+if [ -f "${SENTINEL_DIR}/todos.json" ]; then
     exit 0
 fi
 
