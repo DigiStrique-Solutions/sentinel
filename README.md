@@ -198,6 +198,10 @@ Or edit the generated `.sentinel.json` in your project root.
 4. **Heal the vault.** Every session should leave the vault more accurate than it found it.
 5. **Ship, then improve.** Don't design for hypothetical futures. Build what's needed now.
 
+## User Guide
+
+See [GUIDE.md](GUIDE.md) for a plain-language walkthrough of the 10 problems Sentinel solves, with terminal output examples showing what you actually see.
+
 ## Changelog
 
 See [CHANGELOG.md](CHANGELOG.md) for version history.
