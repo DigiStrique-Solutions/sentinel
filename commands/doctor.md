@@ -80,12 +80,20 @@ test-standards.md   [PASS] exists
 gates.md            [FIXED] created from plugin template
 ```
 
-## Step 5: Check for Orphaned State
+## Step 5: Check for Orphaned Session State
 
-Check for `.sentinel/` directory in the project root. This is a temp directory used during sessions and should not persist.
+Check `.sentinel/sessions/` for stale session files (PIDs that are no longer running).
 
-- If found, delete it and report: `[FIXED] Cleaned up stale .sentinel/ directory`
-- If not found: `[PASS] No stale temp state`
+- For each `.json` file in `.sentinel/sessions/`, check if the `pid` is still alive with `kill -0`
+- If dead, delete the `.json` file and its matching directory
+- Report: `[FIXED] Cleaned up N stale session(s)` or `[PASS] No stale session state`
+
+**Do NOT delete the `.sentinel/` directory itself.** It contains persistent state:
+- `.sentinel/config.json` — user preferences from `/sentinel config`
+- `.sentinel/session-count` — pruning counter
+- `.sentinel/loop/` — active loop state from `/sentinel loop`
+- `.sentinel/batch/` — active batch state from `/sentinel batch`
+- `.sentinel/fact-checks.yml` — project-specific fact check rules
 
 ## Step 6: Check CLAUDE.md
 
