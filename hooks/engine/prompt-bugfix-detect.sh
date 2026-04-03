@@ -38,7 +38,7 @@ IS_BUGFIX=false
 
 # Check 1: Prompt keywords
 if [ -n "$PROMPT" ]; then
-    if echo "$PROMPT" | grep -qiE '(fix |fix$|bug |bug$|broken|doesnt work|does not work|doesn.t work|regression|not working|stopped working|crash|failing|fails)'; then
+    if echo "$PROMPT" | grep -qiE '(fix[: ]|fix$|bug[: ]|bug$|broken|doesnt work|does not work|doesn.t work|regression|not working|stopped working|crash|failing|fails)'; then
         IS_BUGFIX=true
     fi
 fi

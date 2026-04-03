@@ -47,7 +47,11 @@ for f in "${GOTCHA_DIR}"/*.md; do
     # 1. The exact filename
     # 2. The parent directory name
     # 3. The relative path (or parts of it)
-    if grep -qiE "(${BASENAME}|${PARENT_DIR}/|${REL_PATH})" "$f" 2>/dev/null; then
+    # Escape regex metacharacters in filenames (dots, brackets, etc.)
+    SAFE_BASENAME=$(printf '%s' "$BASENAME" | sed 's/[.[\*^$()+?{|]/\\&/g')
+    SAFE_PARENT=$(printf '%s' "$PARENT_DIR" | sed 's/[.[\*^$()+?{|]/\\&/g')
+    SAFE_REL=$(printf '%s' "$REL_PATH" | sed 's/[.[\*^$()+?{|]/\\&/g')
+    if grep -qiE "(${SAFE_BASENAME}|${SAFE_PARENT}/|${SAFE_REL})" "$f" 2>/dev/null; then
         # Extract first heading as a summary
         HEADING=$(grep -m1 '^#' "$f" 2>/dev/null | sed 's/^#* *//' || echo "$GOTCHA_NAME")
         MATCHES="${MATCHES}\n- **${GOTCHA_NAME}**: ${HEADING} (read vault/gotchas/${GOTCHA_NAME}.md)"

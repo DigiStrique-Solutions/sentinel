@@ -61,6 +61,12 @@ bugfix_flag_exists() {
     bugfix_flag_exists
 }
 
+@test "detects 'fix:' conventional commit prefix in prompt" {
+    run_hook "$HOOK" cwd="$PROJECT_DIR" session_id="$SESSION_ID" prompt="fix: the auth redirect loop"
+    assert_success
+    bugfix_flag_exists
+}
+
 @test "does not detect feature requests" {
     run_hook "$HOOK" cwd="$PROJECT_DIR" session_id="$SESSION_ID" prompt="add a new dashboard page"
     assert_success

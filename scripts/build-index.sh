@@ -65,7 +65,7 @@ SEARCH_DIRS="gotchas investigations decisions completed workflows patterns archi
     done
 } > "$INDEX_FILE"
 
-entry_count=$(grep -c '^\|' "$INDEX_FILE" | head -1 || echo "0")
+entry_count=$(grep -cE '^\|' "$INDEX_FILE" | head -1 || echo "0")
 # Subtract header rows (2 per table: header + separator)
 table_count=$(grep -c '^## ' "$INDEX_FILE" || echo "0")
 entry_count=$((entry_count - table_count * 2))
