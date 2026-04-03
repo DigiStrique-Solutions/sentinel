@@ -58,7 +58,36 @@ Claude now knows what was tried before, what didn't work, and why. It skips the 
 
 ---
 
-### 2. Claude says "done" but tests never actually ran
+### 2. Claude loses everything mid-session when context compacts
+
+**The problem:** You're 45 minutes into a session. Claude has been following your CLAUDE.md rules perfectly — using the right patterns, avoiding anti-patterns, following your workflow. Then auto-compaction triggers. Suddenly Claude ignores your rules, uses patterns you banned, and forgets everything it was working on. Your project instructions were followed 100% before compaction and violated 100% after. This is the #2 most reported Claude Code issue.
+
+**What Sentinel does:** A pre-compaction hook saves the current session state — what files were modified, what investigations are open, what the task was — to a recovery file. When the next session starts (or the same session continues after compaction), the session-start loader picks up the recovery file and restores context. The vault itself is never affected by compaction because it's on disk, not in context.
+
+**What you see:**
+
+When compaction is about to happen:
+```
+PRE-COMPACT: Saved session state to vault/session-recovery/2026-04-03T14-30-00.md
+  Files modified: 7
+  Task: Fixing auth redirect loop
+  Open investigation: 2026-04-03-auth-redirect.md
+```
+
+After compaction (or in the next session):
+```
+PREVIOUS SESSION (incomplete work)
+  Date: 2026-04-03
+  Files modified: 7 (src/auth/*, tests/auth/*)
+  Task context: Fixing auth redirect loop
+  Open investigation: 2026-04-03-auth-redirect.md
+```
+
+Claude picks up where it left off. The vault knowledge (gotchas, investigations, decisions) is never lost because it was never in the context window to begin with — it's on disk.
+
+---
+
+### 3. Claude says "done" but tests never actually ran
 
 **The problem:** You ask Claude to fix a bug. It modifies three files, writes a test, and says "All tests pass, the fix is complete." You trust it and move on. Later, you discover the tests were never actually executed — Claude just wrote them and assumed they'd pass. Or worse, it ran the tests but they failed, and Claude claimed success anyway.
 
@@ -90,7 +119,7 @@ The evidence is captured by hooks that observe actual command execution — not 
 
 ---
 
-### 3. Claude fixes the symptom but breaks adjacent code
+### 4. Claude fixes the symptom but breaks adjacent code
 
 **The problem:** You report a bug in the login flow. Claude fixes it and writes a test for the exact scenario you described. The test passes. You open the browser, try logging in — it works. Then you try logging out and the app crashes. Claude fixed the narrow symptom but never checked whether the fix broke anything nearby.
 
@@ -118,7 +147,35 @@ The evidence is captured by hooks that observe actual command execution — not 
 
 ---
 
-### 4. Claude tries a fix that already failed last week
+### 5. Claude writes tests that test the mock, not the code
+
+**The problem:** You ask Claude to add tests for a service. It creates a test file, mocks the service, and asserts the mock was called. The test passes — but it would pass even if you deleted the entire service. The test is testing the mock setup, not the actual code. This is the most common test quality failure in AI-generated code.
+
+**What Sentinel does:** Quality gates and anti-patterns documentation explicitly ban this pattern. The stop hook checks for test execution and warns when tests exist but may not exercise real code. The verification gap detection warns when test scope is too narrow relative to the changes made.
+
+**What you see:**
+
+The anti-patterns file loaded into Claude's context includes:
+```
+ANTI-PATTERN #1: Testing the Mock, Not the Code
+
+BAD — test mocks the function under test:
+  classifier = MagicMock()
+  classifier.classify.return_value = result
+  assert result.needs_planning is True
+  # This passes even if ComplexityClassifier is deleted.
+
+GOOD — test calls the real function:
+  classifier = ComplexityClassifier()
+  result = await classifier.classify("Audit my campaigns")
+  assert result.needs_planning is True
+```
+
+Claude sees this before writing tests and avoids the pattern. If it still writes a narrow test, the verification gap detection catches it at session end.
+
+---
+
+### 6. Claude tries a fix that already failed last week
 
 **The problem:** A bug keeps resurfacing. Each time, Claude tries the same obvious approach, hits the same wall, and wastes 30 minutes before discovering the approach doesn't work. There's no record of past debugging sessions.
 
@@ -155,7 +212,42 @@ When an investigation is resolved, Sentinel automatically moves it to `vault/inv
 
 ---
 
-### 5. Multiple agents editing the same repo cause conflicts
+### 7. Claude gets stuck in a loop, wasting hundreds of API calls
+
+**The problem:** Claude tries to fix a build error. The fix introduces a new error. Claude fixes that, which reintroduces the first error. This cycles for 50+ iterations, burning through your API quota while making zero progress. The leaked Claude Code source data showed sessions with up to 3,272 consecutive failures — globally, ~250,000 API calls per day were wasted on these spirals.
+
+**What Sentinel does:** Two mechanisms:
+
+1. **Investigation journal's 2-failure stop rule** — After 2 failed approaches to the same problem, Sentinel forces a stop. The context is polluted with failed reasoning, and continuing will spiral. A fresh session with the investigation file is faster.
+
+2. **Loop command's stall detection** — When using `/sentinel loop`, if 2 consecutive iterations make no progress (same number of items remaining), the loop stops automatically instead of grinding through identical failures.
+
+**What you see:**
+
+After the second failure:
+```
+Two approaches failed on this issue. Context may be polluted.
+Suggestion: /clear and restart with a better-scoped prompt.
+Investigation saved: vault/investigations/2026-04-03-build-error.md
+```
+
+During a loop:
+```
+--- Loop iteration 7/20 ---
+Items remaining: 3
+
+--- Loop iteration 8/20 ---
+Items remaining: 3
+
+Loop STUCK — no progress for 2 iterations.
+This usually means the remaining issues require a different approach.
+```
+
+No more burning through your API quota on the same error 50 times.
+
+---
+
+### 8. Multiple agents editing the same repo cause conflicts
 
 **The problem:** You're running two Claude Code sessions on the same repo — one working on the frontend, another on the backend. They both edit shared config files. When you try to commit, there are merge conflicts everywhere.
 
@@ -188,11 +280,11 @@ No manual merge conflicts. No coordination needed. You just start sessions and w
 
 ---
 
-### 6. Git is overwhelming
+### 9. Git is overwhelming
 
 **The problem:** You're a data scientist, a designer, or a student. You don't know git. You don't want to learn git. You just want to write code and have it saved properly.
 
-**What Sentinel does:** Git Autopilot handles everything. When a session starts, Sentinel creates a branch. When it ends, Sentinel stages your changes, generates a commit message from the files you modified, and commits. Sensitive files (.env, private keys, credentials) are automatically excluded.
+**What Sentinel does:** Git Autopilot handles everything. When a session starts, Sentinel creates a dedicated branch (so you never accidentally commit to main). When it ends, Sentinel stages your changes, generates a commit message from the files you modified, and commits. Sensitive files are automatically excluded — `.env`, `*.pem`, `*.key`, `credentials.json`, and `secrets.*` are never staged, even if Claude created or modified them. This also prevents the reported issue of Claude accidentally committing sensitive files when switching branches.
 
 **What you see:**
 
@@ -211,7 +303,7 @@ You never run `git add`, `git commit`, `git push`, or write a commit message. It
 
 ---
 
-### 7. The task is too large for one context window
+### 10. The task is too large for one context window
 
 **The problem:** You need to generate documentation for a 500,000-line codebase, or migrate 200 files from one pattern to another, or add type annotations to every function in the project. Claude runs out of context after processing 20 files and the other 180 are untouched.
 
@@ -280,7 +372,7 @@ This usually means the remaining issues require a different approach.
 
 ---
 
-### 8. The context window fills up with irrelevant content
+### 11. The context window fills up with irrelevant content
 
 **The problem:** You have CLAUDE.md, rules, MCP servers, plugins, and vault content all competing for space in the context window. Most of it is irrelevant to the current task. A workflow you'll never use this session takes 3,000 tokens. MCP tool names you'll never invoke take another 500.
 
@@ -317,7 +409,7 @@ Recommendations:
 
 ---
 
-### 9. Documentation goes stale without anyone noticing
+### 12. Documentation goes stale without anyone noticing
 
 **The problem:** Your architecture docs reference `src/models/User.py`, but that file was renamed to `src/entities/user.py` three months ago. Your CLAUDE.md says "209 connector tools" but the actual count is now 215. Nobody noticed because nobody checks.
 
@@ -349,7 +441,7 @@ CLAUDE.md FACT CHECK — numbers may be outdated:
 
 ---
 
-### 10. Team members don't share knowledge
+### 13. Team members don't share knowledge
 
 **The problem:** Sarah debugged a tricky timezone issue on Monday and discovered a non-obvious constraint. Mike hits the same issue on Wednesday in a different part of the codebase. He spends an hour debugging before stumbling on the same solution Sarah already found.
 
