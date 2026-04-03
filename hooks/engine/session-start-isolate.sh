@@ -33,6 +33,24 @@ SENTINEL_DIR="${REPO_ROOT}/.sentinel"
 SESSIONS_DIR="${SENTINEL_DIR}/sessions"
 mkdir -p "$SESSIONS_DIR" 2>/dev/null || true
 
+# Resolve the real Claude Code PID from ~/.claude/sessions/
+# Hook $$ is the bash subprocess PID (ephemeral, dies after hook exits).
+# The actual Claude Code PID lives in ~/.claude/sessions/{pid}.json
+CLAUDE_PID=""
+CLAUDE_SESSIONS_DIR="${HOME}/.claude/sessions"
+if [ -d "$CLAUDE_SESSIONS_DIR" ]; then
+    for pid_file in "${CLAUDE_SESSIONS_DIR}"/*.json; do
+        [ -f "$pid_file" ] || continue
+        FILE_SID=$(jq -r '.sessionId // empty' "$pid_file" 2>/dev/null || echo "")
+        if [ "$FILE_SID" = "$SESSION_ID" ]; then
+            CLAUDE_PID=$(jq -r '.pid // empty' "$pid_file" 2>/dev/null || echo "")
+            break
+        fi
+    done
+fi
+# Fallback: use $PPID if we couldn't find it (better than $$)
+CLAUDE_PID="${CLAUDE_PID:-$PPID}"
+
 # Clean up stale session entries (process no longer running)
 for session_file in "${SESSIONS_DIR}"/*.json; do
     [ -f "$session_file" ] || continue
@@ -46,8 +64,7 @@ done
 CONCURRENT_COUNT=0
 CONCURRENT_IDS=""
 
-# Also check Claude Code's own session registry
-CLAUDE_SESSIONS_DIR="${HOME}/.claude/sessions"
+# Check Claude Code's session registry for concurrent sessions
 if [ -d "$CLAUDE_SESSIONS_DIR" ]; then
     for pid_file in "${CLAUDE_SESSIONS_DIR}"/*.json; do
         [ -f "$pid_file" ] || continue
@@ -74,27 +91,12 @@ if [ -d "$CLAUDE_SESSIONS_DIR" ]; then
     done
 fi
 
-# Also check our own sentinel session registry
-for session_file in "${SESSIONS_DIR}"/*.json; do
-    [ -f "$session_file" ] || continue
-    OTHER_ID=$(jq -r '.session_id // empty' "$session_file" 2>/dev/null || echo "")
-    [ "$OTHER_ID" = "$SESSION_ID" ] && continue
-
-    # Already counted via Claude sessions? Skip
-    echo "$CONCURRENT_IDS" | grep -q "$OTHER_ID" && continue
-
-    OTHER_PID=$(jq -r '.pid // empty' "$session_file" 2>/dev/null || echo "")
-    if [ -n "$OTHER_PID" ] && kill -0 "$OTHER_PID" 2>/dev/null; then
-        CONCURRENT_COUNT=$((CONCURRENT_COUNT + 1))
-    fi
-done
-
 # Register this session
 SHORT_ID="${SESSION_ID:0:12}"
 cat > "${SESSIONS_DIR}/${SHORT_ID}.json" << EOF
 {
     "session_id": "${SESSION_ID}",
-    "pid": $$,
+    "pid": ${CLAUDE_PID},
     "cwd": "${CWD}",
     "repo_root": "${REPO_ROOT}",
     "started_at": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
@@ -119,7 +121,7 @@ if [ "$CONCURRENT_COUNT" -gt 0 ]; then
         cat > "${SESSIONS_DIR}/${SHORT_ID}.json" << EOF
 {
     "session_id": "${SESSION_ID}",
-    "pid": $$,
+    "pid": ${CLAUDE_PID},
     "cwd": "${CWD}",
     "repo_root": "${REPO_ROOT}",
     "worktree": true,
