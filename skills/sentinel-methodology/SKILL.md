@@ -284,6 +284,33 @@ Periodically review the full vault for:
 
 ---
 
+## 6. No Premature Completion Claims
+
+### The Iron Law
+
+```
+NO COMPLETION CLAIMS WITHOUT FRESH VERIFICATION EVIDENCE
+```
+
+If you haven't run the verification command in this response, you cannot claim it passes.
+
+### Forbidden Patterns
+
+Never say any of these without fresh evidence in the same message:
+- "All tests pass" — without showing the test output
+- "The fix is complete" — without running verification
+- "Everything looks good" — without checking
+- "Done!" — without evidence
+
+### What to Do Instead
+
+1. **Run the verification command** (test, lint, build, type check)
+2. **Read the output** — check exit code, count failures
+3. **State the result with evidence** — "pytest ran 47 tests, all passed (exit 0)"
+4. If it failed, say so. False confidence is worse than honest failure.
+
+---
+
 ## Key Principles
 
 1. **Wrong information is worse than no information.** A stale gotcha actively misleads. Delete it.
@@ -291,3 +318,5 @@ Periodically review the full vault for:
 3. **Write immediately.** The moment something unexpected happens, document it. Not later. Now.
 4. **Tests are truth, not self-assessment.** If you cannot write a verification command for a unit of work, the unit is too vague.
 5. **The vault is a living system.** It requires active maintenance, not just passive accumulation.
+6. **Evidence before claims, always.** No completion claims without running the verification command first. Claiming without evidence is lying, not efficiency.
+7. **No fixes without root cause.** If you don't understand why it's broken, you can't fix it. Symptom fixes create new bugs.
