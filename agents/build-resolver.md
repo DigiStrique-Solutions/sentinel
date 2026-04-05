@@ -1,5 +1,5 @@
 ---
-name: build-resolver
+name: sentinel-build-resolver
 description: Build error resolution agent. Reads error output, diagnoses root cause, and applies minimal fixes. Does not refactor or add features.
 origin: sentinel
 model: haiku

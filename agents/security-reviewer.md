@@ -1,5 +1,5 @@
 ---
-name: security-reviewer
+name: sentinel-security-reviewer
 description: OWASP Top 10 security scanner. Reviews code for injection, XSS, CSRF, hardcoded secrets, auth bypass, SSRF, and other vulnerabilities.
 origin: sentinel
 model: sonnet

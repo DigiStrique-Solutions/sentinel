@@ -12,15 +12,15 @@ Sentinel is a Claude Code plugin that gives your AI assistant **institutional me
 
 **Concurrent Session Isolation** — Run multiple Claude Code agents on the same repo simultaneously. Sentinel detects concurrent sessions, auto-creates git worktrees for isolation, and auto-merges changes back when sessions end. No conflicts, no coordination needed.
 
-**Team Collaboration** — Multiple developers share vault knowledge through git. A custom merge driver prevents conflicts on vault files. A daily activity feed logs what each team member's sessions did. New members get guided onboarding via `/sentinel:onboard`.
+**Team Collaboration** — Multiple developers share vault knowledge through git. A custom merge driver prevents conflicts on vault files. A daily activity feed logs what each team member's sessions did. New members get guided onboarding via `/sentinel-onboard`.
 
 **Verification, Not Trust** — Claude can claim "tests pass" without running them, or say "all done" with tasks still pending. Sentinel catches both. An evidence log records every test/lint/build command with its actual exit status — Claude can't retroactively claim success. A todo mirror tracks task state independently — if tasks are incomplete at session end, they're listed. The stop hook audits evidence against what should have happened: "5 Python files modified, 0 test executions found."
 
 **Verification Gap Detection** — Claude fixes a narrow symptom and writes a narrow test — but the user finds new bugs in the browser. Sentinel catches this with three checks: (1) test scope breadth — warns when only a single test function was run but multiple files changed, (2) adjacent test detection — finds test files that import modified modules and warns if they weren't executed, (3) bug-fix mode — detects bug-fix tasks and enforces reproduce-first verification (a failing test should precede the fix).
 
-**Loop & Batch Execution** — Some tasks are too large for one context window. `/sentinel:loop` runs a task repeatedly until a condition is met (fix all lint errors, get tests passing, tune prompts). `/sentinel:batch` breaks a massive task into work items and processes each with isolated sub-agents — generate codemaps for a 500K-line repo, migrate hundreds of files, bulk-add documentation. Both track progress to disk and are resumable.
+**Loop & Batch Execution** — Some tasks are too large for one context window. `/sentinel-loop` runs a task repeatedly until a condition is met (fix all lint errors, get tests passing, tune prompts). `/sentinel-batch` breaks a massive task into work items and processes each with isolated sub-agents — generate codemaps for a 500K-line repo, migrate hundreds of files, bulk-add documentation. Both track progress to disk and are resumable.
 
-**Context Optimization** — Sentinel minimizes its own context footprint. Workflow references use progressive disclosure (loaded on demand, not eagerly). The session-start loader operates within a configurable token budget, loading vault entries in priority order and filtering gotchas by relevance to recently changed code. `/sentinel:context` audits all context sources (CLAUDE.md, rules, MCP servers, plugins, hooks, vault) with token estimates and actionable recommendations.
+**Context Optimization** — Sentinel minimizes its own context footprint. Workflow references use progressive disclosure (loaded on demand, not eagerly). The session-start loader operates within a configurable token budget, loading vault entries in priority order and filtering gotchas by relevance to recently changed code. `/sentinel-context` audits all context sources (CLAUDE.md, rules, MCP servers, plugins, hooks, vault) with token estimates and actionable recommendations.
 
 **Documentation Drift Detection** — Architecture docs and CLAUDE.md go stale as code changes. Sentinel detects this automatically. At session end, it scans architecture docs for dead file references. At session start, it verifies CLAUDE.md numerical claims against actual counts. Stale docs get flagged so Claude updates them.
 
@@ -49,7 +49,7 @@ This registers the Strique plugin registry with your Claude Code installation. Y
 **Step 3: Bootstrap your project**
 
 ```
-/sentinel:bootstrap
+/sentinel-bootstrap
 ```
 
 This scaffolds a `vault/` directory, quality gates, and workflows tailored to your project. Choose a preset:
@@ -137,7 +137,7 @@ Next session starts → better context loaded
 - `stop-git` — Auto-commits all changes with conventional message (Git Autopilot)
 - `stop-merge` — Auto-merges worktree branch back and cleans up
 
-**Optional (4, self-guarding — enable via `/sentinel:config`):**
+**Optional (4, self-guarding — enable via `/sentinel-config`):**
 - `stop-pattern-extractor` — Extracts reusable patterns from session
 - `stop-session-summary` — Generates session summary for vault
 - `prompt-vault-search` — Searches vault for relevant context on user prompts
@@ -170,17 +170,17 @@ Common rules (9) plus language-specific extensions for Python (3) and TypeScript
 
 ### Commands (11)
 
-- `/sentinel:bootstrap` — Scaffold vault and workflows for a new project
-- `/sentinel:health` — Dashboard showing vault health metrics
-- `/sentinel:doctor` — Diagnose and fix common setup issues
-- `/sentinel:prune` — Deep vault cleanup (duplicates, dead refs, archive management)
-- `/sentinel:eject` — Export all Sentinel content to standalone files
-- `/sentinel:config` — View and modify Sentinel settings
-- `/sentinel:onboard` — Guided team onboarding for new members
-- `/sentinel:loop` — Convergence loop: repeat a task until a condition is met (lint cleanup, test fixes, prompt tuning)
-- `/sentinel:batch` — Map-reduce: break a huge task into work items, process each with sub-agents (codemap generation, mass migration, bulk docs)
-- `/sentinel:context` — Audit all context sources with token estimates and optimization recommendations
-- `/sentinel:stats` — Effectiveness metrics: vault health, knowledge reuse rates, code discipline trends
+- `/sentinel-bootstrap` — Scaffold vault and workflows for a new project
+- `/sentinel-health` — Dashboard showing vault health metrics
+- `/sentinel-doctor` — Diagnose and fix common setup issues
+- `/sentinel-prune` — Deep vault cleanup (duplicates, dead refs, archive management)
+- `/sentinel-eject` — Export all Sentinel content to standalone files
+- `/sentinel-config` — View and modify Sentinel settings
+- `/sentinel-onboard` — Guided team onboarding for new members
+- `/sentinel-loop` — Convergence loop: repeat a task until a condition is met (lint cleanup, test fixes, prompt tuning)
+- `/sentinel-batch` — Map-reduce: break a huge task into work items, process each with sub-agents (codemap generation, mass migration, bulk docs)
+- `/sentinel-context` — Audit all context sources with token estimates and optimization recommendations
+- `/sentinel-stats` — Effectiveness metrics: vault health, knowledge reuse rates, code discipline trends
 
 ### Workflows (13)
 
@@ -192,15 +192,15 @@ Sentinel splits content into two categories:
 
 **Plugin-owned (auto-updates):** Hooks, skills, agents, rules, commands, templates. These ship with the plugin and update when you update Sentinel.
 
-**Project-owned (your content):** The `vault/` directory, your `CLAUDE.md`, and any customizations. These are scaffolded by `/sentinel:bootstrap` and belong to your project. Sentinel never overwrites them.
+**Project-owned (your content):** The `vault/` directory, your `CLAUDE.md`, and any customizations. These are scaffolded by `/sentinel-bootstrap` and belong to your project. Sentinel never overwrites them.
 
 ## Configuration
 
-After bootstrapping, customize via `/sentinel:config`:
+After bootstrapping, customize via `/sentinel-config`:
 
 ```
-/sentinel:config set hooks.optional.design-check enabled
-/sentinel:config set hooks.optional.pattern-extractor enabled
+/sentinel-config set hooks.optional.design-check enabled
+/sentinel-config set hooks.optional.pattern-extractor enabled
 ```
 
 Or edit the generated `.sentinel.json` in your project root.

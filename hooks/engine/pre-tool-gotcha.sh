@@ -88,7 +88,7 @@ fi
 if [ -n "$MATCHES" ]; then
     echo -e "GOTCHA ALERT for $(basename "$FILE_PATH") -- review before editing:${MATCHES}"
 
-    # Track gotcha hits for /sentinel:stats
+    # Track gotcha hits for /sentinel-stats
     SESSION_ID=$(echo "$INPUT" | jq -r '.session_id // empty')
     SENTINEL_DIR="${CWD}/.sentinel"
     if [ -n "$SESSION_ID" ]; then

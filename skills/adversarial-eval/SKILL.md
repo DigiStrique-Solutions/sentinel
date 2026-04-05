@@ -1,5 +1,5 @@
 ---
-name: adversarial-eval
+name: sentinel-adversarial-eval
 description: Adversarial evaluation protocol for finding flaws in tests, prompts, and code reviews. Activates when validating test quality, auditing prompts, reviewing architecture, or running convergence loops. Enforces multi-round evaluation with 3-round max, mutation testing concepts, and structured issue tracking.
 origin: sentinel
 ---

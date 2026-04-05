@@ -21,7 +21,7 @@ Install Sentinel and set up your project in under a minute.
 **Bootstrap your project:**
 
 ```
-/sentinel:bootstrap
+/sentinel-bootstrap
 ```
 
 You'll be asked to choose a preset:
@@ -270,7 +270,7 @@ When an investigation is resolved, Sentinel automatically moves it to `vault/inv
 
 1. **Investigation journal's 2-failure stop rule** — After 2 failed approaches to the same problem, Sentinel forces a stop. The context is polluted with failed reasoning, and continuing will spiral. A fresh session with the investigation file is faster.
 
-2. **Loop command's stall detection** — When using `/sentinel:loop`, if 2 consecutive iterations make no progress (same number of items remaining), the loop stops automatically instead of grinding through identical failures.
+2. **Loop command's stall detection** — When using `/sentinel-loop`, if 2 consecutive iterations make no progress (same number of items remaining), the loop stops automatically instead of grinding through identical failures.
 
 **What you see:**
 
@@ -359,15 +359,15 @@ You never run `git add`, `git commit`, `git push`, or write a commit message. It
 
 **What Sentinel does:** Two commands for large tasks:
 
-**`/sentinel:batch`** breaks a massive task into independent work items. Each item is processed by a sub-agent with its own context window. Progress is checkpointed after every item, so if the session crashes, you resume from the last checkpoint — not from the beginning.
+**`/sentinel-batch`** breaks a massive task into independent work items. Each item is processed by a sub-agent with its own context window. Progress is checkpointed after every item, so if the session crashes, you resume from the last checkpoint — not from the beginning.
 
-**`/sentinel:loop`** repeats a task until a completion condition is mechanically verified. It detects stalls — if two consecutive iterations make no progress, it stops instead of grinding through identical failures.
+**`/sentinel-loop`** repeats a task until a completion condition is mechanically verified. It detects stalls — if two consecutive iterations make no progress, it stops instead of grinding through identical failures.
 
 **What you see:**
 
 For batch processing:
 ```
-/sentinel:batch "generate documentation" --target "src/**/*.py" --parallel 3
+/sentinel-batch "generate documentation" --target "src/**/*.py" --parallel 3
 
 Batch created: 150 files to process.
 
@@ -385,14 +385,14 @@ Output: .sentinel/batch/batch-abc123/results/INDEX.md
 
 If it crashes at file 73:
 ```
-/sentinel:batch --resume
+/sentinel-batch --resume
 
 Resuming batch-abc123 from item 74/150 (73 completed, 0 failed)
 ```
 
 For convergence loops:
 ```
-/sentinel:loop "run ruff check src/ and fix all errors" --until "ruff reports 0 errors" --max 20
+/sentinel-loop "run ruff check src/ and fix all errors" --until "ruff reports 0 errors" --max 20
 
 --- Loop iteration 1/20 ---
 Running ruff... 47 errors found. Fixing...
@@ -440,7 +440,7 @@ VAULT CONTEXT LOADED (2 investigations, 5 gotchas, ~1,400 tokens):
   ...
 ```
 
-To see the full breakdown, run `/sentinel:context`:
+To see the full breakdown, run `/sentinel-context`:
 ```
 TOTAL CONTEXT OVERHEAD (before you type anything)
 Source                      Tokens     % of 200K window
@@ -497,7 +497,7 @@ CLAUDE.md FACT CHECK — numbers may be outdated:
 
 **What Sentinel does:** The vault is a shared directory committed to git. When Sarah discovers a gotcha, it's saved to `vault/gotchas/timezone-handling.md`. When Mike starts a session, Sentinel loads that gotcha into his context — before he touches any code. A daily activity feed at `vault/activity/` shows what each team member's sessions did.
 
-A custom git merge driver prevents conflicts on vault files. New members get guided onboarding via `/sentinel:onboard`.
+A custom git merge driver prevents conflicts on vault files. New members get guided onboarding via `/sentinel-onboard`.
 
 **What you see:**
 
@@ -518,7 +518,7 @@ Mike avoids the bug entirely. He never even knows he was about to make a mistake
 
 New team member joins:
 ```
-/sentinel:onboard
+/sentinel-onboard
 
 Welcome! Here's what the team has been working on:
 
@@ -545,7 +545,7 @@ This happens for three reasons: (1) Claude's permission mode blocks the command 
 
 1. **Behavioral rule** (`rules/common/autonomy.md`) — A rule file loaded into every session that explicitly instructs Claude: "Execute commands yourself. Never tell the user to run something you can run." This is always in context and survives compaction via the Compact Instructions section in CLAUDE.md.
 
-2. **Auto-configured permissions** — During `/sentinel:bootstrap`, Sentinel detects your stack (Python, TypeScript, or both) and writes tool permissions to `.claude/settings.json`. This pre-approves all standard dev commands — pytest, ruff, npm, eslint, tsc, git operations, file operations — so Claude never hits a permission prompt that causes it to fall back to suggesting.
+2. **Auto-configured permissions** — During `/sentinel-bootstrap`, Sentinel detects your stack (Python, TypeScript, or both) and writes tool permissions to `.claude/settings.json`. This pre-approves all standard dev commands — pytest, ruff, npm, eslint, tsc, git operations, file operations — so Claude never hits a permission prompt that causes it to fall back to suggesting.
 
 3. **CLAUDE.md autonomy section** — Every CLAUDE.md template includes an "Autonomy" section with explicit instructions and examples. The Compact Instructions section includes "ALWAYS execute commands yourself — never tell the user to run something" as the first rule, ensuring it survives context compaction.
 
@@ -588,17 +588,17 @@ The rule is clear about the four exceptions where asking is correct: destructive
 
 | Command | What it does |
 |---------|-------------|
-| `/sentinel:bootstrap` | Set up Sentinel for a new project (run once) |
-| `/sentinel:health` | Show vault health, open investigations, staleness warnings |
-| `/sentinel:doctor` | Diagnose and fix common setup issues |
-| `/sentinel:stats` | Show effectiveness metrics: vault health, knowledge reuse, code discipline |
-| `/sentinel:context` | Audit context window usage with token estimates and recommendations |
-| `/sentinel:config` | Enable/disable optional hooks and adjust thresholds |
-| `/sentinel:prune` | Deep vault cleanup: duplicates, dead references, archive management |
-| `/sentinel:loop` | Repeat a task until a condition is met (lint cleanup, test fixes) |
-| `/sentinel:batch` | Break a massive task into work items with sub-agents (bulk docs, migrations) |
-| `/sentinel:onboard` | Guided setup for new team members |
-| `/sentinel:eject` | Copy all plugin files into your project for full customization |
+| `/sentinel-bootstrap` | Set up Sentinel for a new project (run once) |
+| `/sentinel-health` | Show vault health, open investigations, staleness warnings |
+| `/sentinel-doctor` | Diagnose and fix common setup issues |
+| `/sentinel-stats` | Show effectiveness metrics: vault health, knowledge reuse, code discipline |
+| `/sentinel-context` | Audit context window usage with token estimates and recommendations |
+| `/sentinel-config` | Enable/disable optional hooks and adjust thresholds |
+| `/sentinel-prune` | Deep vault cleanup: duplicates, dead references, archive management |
+| `/sentinel-loop` | Repeat a task until a condition is met (lint cleanup, test fixes) |
+| `/sentinel-batch` | Break a massive task into work items with sub-agents (bulk docs, migrations) |
+| `/sentinel-onboard` | Guided setup for new team members |
+| `/sentinel-eject` | Copy all plugin files into your project for full customization |
 
 ---
 
@@ -627,7 +627,7 @@ No. Session-start hooks run in parallel and complete in under 2 seconds. Per-too
 The core features (vault, investigations, git autopilot, concurrent isolation, batch/loop) are language-agnostic. The verification hooks (test detection, lint checking) currently support Python and TypeScript/JavaScript, with detection for Go, Rust, and others.
 
 **Can I use Sentinel without the git features?**
-Yes. Git Autopilot and concurrent isolation are separate hooks. You can disable them via `/sentinel:config` and still benefit from the vault, quality gates, and verification.
+Yes. Git Autopilot and concurrent isolation are separate hooks. You can disable them via `/sentinel-config` and still benefit from the vault, quality gates, and verification.
 
 **Does Sentinel modify my code?**
 Never. Sentinel only reads your code (for drift detection, fact checking, and impact analysis). It writes to the `vault/` directory and `.sentinel/` tracking directory — never to your source files.
@@ -636,10 +636,10 @@ Never. Sentinel only reads your code (for drift detection, fact checking, and im
 Warnings are advisory, not blocking. Sentinel exits with code 0 regardless — it tells you what it found, and you decide what to act on.
 
 **Can I use Sentinel on an existing project?**
-Yes. Run `/sentinel:bootstrap` in any project. It creates the vault structure without touching existing files. Historical knowledge builds up naturally as you work.
+Yes. Run `/sentinel-bootstrap` in any project. It creates the vault structure without touching existing files. Historical knowledge builds up naturally as you work.
 
 **How do I measure if Sentinel is helping?**
-Run `/sentinel:stats`. It shows investigation resolution rates, gotcha surfacing frequency, test/lint compliance across sessions, and commit patterns. No guesswork — real data from real sessions.
+Run `/sentinel-stats`. It shows investigation resolution rates, gotcha surfacing frequency, test/lint compliance across sessions, and commit patterns. No guesswork — real data from real sessions.
 
 **What happens if I uninstall Sentinel?**
 Your `vault/` directory stays. It's your project's knowledge base — committed to git, readable by anyone. The `.sentinel/` directory can be safely deleted. Your code is unaffected.

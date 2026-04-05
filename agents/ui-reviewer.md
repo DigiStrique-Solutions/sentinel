@@ -1,5 +1,5 @@
 ---
-name: ui-reviewer
+name: sentinel-ui-reviewer
 description: Frontend review agent combining design system compliance, accessibility, responsive layout, dark mode, and UX heuristics.
 origin: sentinel
 model: sonnet

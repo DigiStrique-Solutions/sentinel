@@ -1,5 +1,5 @@
 ---
-name: tdd
+name: sentinel-tdd
 description: Test-Driven Development workflow enforcement. Activates when writing new features, fixing bugs, or refactoring code. Enforces RED-GREEN-REFACTOR cycle with 80%+ coverage, edge case coverage, and anti-pattern avoidance.
 origin: sentinel
 ---

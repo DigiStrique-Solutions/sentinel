@@ -1,5 +1,5 @@
 ---
-name: refactor-cleaner
+name: sentinel-refactor-cleaner
 description: Dead code removal and consolidation agent. Identifies and safely removes unused exports, imports, functions, and variables.
 origin: sentinel
 model: haiku

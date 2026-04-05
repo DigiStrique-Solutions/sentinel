@@ -1,5 +1,5 @@
 ---
-name: code-reviewer
+name: sentinel-code-reviewer
 description: General code review agent. Reviews code for quality, readability, error handling, naming, structure, and maintainability.
 origin: sentinel
 model: sonnet

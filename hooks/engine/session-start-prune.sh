@@ -5,7 +5,7 @@
 # Three tiers:
 #   Tier 1 (auto-archive): Silently moves clearly stale entries to vault/.archive/
 #   Tier 2 (auto-flag): Outputs warnings for ambiguous entries that need human review
-#   Tier 3 (manual): Deep cleanup via /sentinel:prune command (not in this hook)
+#   Tier 3 (manual): Deep cleanup via /sentinel-prune command (not in this hook)
 #
 # NEVER deletes — always archives to vault/.archive/ with original directory structure.
 # If someone needs something back, it's still there.

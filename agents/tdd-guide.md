@@ -1,5 +1,5 @@
 ---
-name: tdd-guide
+name: sentinel-tdd-guide
 description: TDD enforcement agent. Guides the RED-GREEN-REFACTOR cycle, verifies test-first discipline, and ensures coverage targets are met.
 origin: sentinel
 model: sonnet

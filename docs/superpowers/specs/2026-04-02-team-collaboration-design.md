@@ -45,8 +45,8 @@ Merge driver behavior:
 
 **Setup:**
 
-- `/sentinel:bootstrap` (team preset) adds `.gitattributes` and instructs user to configure merge driver
-- `/sentinel:doctor` verifies merge driver is configured
+- `/sentinel-bootstrap` (team preset) adds `.gitattributes` and instructs user to configure merge driver
+- `/sentinel-doctor` verifies merge driver is configured
 - Non-Claude-Code users set it up manually via `git config merge.sentinel-vault.driver`
 
 ### Files
@@ -144,7 +144,7 @@ New team members install Sentinel but don't know team standards, recent context,
 
 ### Solution: Command + Passive Hook
 
-**`/sentinel:onboard` command (guided):**
+**`/sentinel-onboard` command (guided):**
 
 Steps:
 1. **Check prerequisites** — Sentinel installed? Vault exists? Team manifest exists?
@@ -160,7 +160,7 @@ Steps:
 Addition to `session-start-loader.sh`:
 - Check if `templates/shared/manifest.json` exists (team preset active)
 - Check if `.sentinel/onboarded-<git-username>` exists
-- If not: output one-line nudge: `"TEAM ONBOARDING: You haven't completed team onboarding yet. Run /sentinel:onboard to get set up."`
+- If not: output one-line nudge: `"TEAM ONBOARDING: You haven't completed team onboarding yet. Run /sentinel-onboard to get set up."`
 
 Fires once per session until they run the command. Non-intrusive.
 
@@ -168,7 +168,7 @@ Fires once per session until they run the command. Non-intrusive.
 
 - Read vault files manually (they're just markdown)
 - Set up merge driver via `git config` command
-- `/sentinel:doctor` detects missing merge driver setup
+- `/sentinel-doctor` detects missing merge driver setup
 - The onboard command detects non-Claude-Code context and outputs plain text instructions
 
 ### Files
@@ -187,7 +187,7 @@ Fires once per session until they run the command. Non-intrusive.
 | File | Purpose |
 |------|---------|
 | `scripts/vault-merge-driver.sh` | Git merge driver for vault markdown files |
-| `commands/onboard.md` | `/sentinel:onboard` guided team setup |
+| `commands/onboard.md` | `/sentinel-onboard` guided team setup |
 | `templates/shared/gitattributes-team` | `.gitattributes` template for merge driver |
 | `hooks/engine/activity-logger.sh` | Shared function for activity feed logging |
 | `templates/vault/activity/.gitkeep` | Directory placeholder for activity feed |

@@ -1,5 +1,5 @@
 ---
-name: quality-patterns
+name: sentinel-quality-patterns
 description: Universal anti-patterns and test standards. Activates when reviewing test quality, writing tests, or auditing code for common mistakes. Covers the 10 most damaging anti-patterns with BAD/GOOD examples, test validity criteria, and mocking guidelines.
 origin: sentinel
 ---

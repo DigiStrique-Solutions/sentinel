@@ -309,7 +309,7 @@ if [ -d "${CWD}/vault/investigations" ]; then
 fi
 
 # --- Collect session stats before cleanup ---
-# Append one session record to vault/.sentinel-stats.json for /sentinel:stats
+# Append one session record to vault/.sentinel-stats.json for /sentinel-stats
 if [ -n "$SESSION_ID" ] && [ -d "$VAULT_DIR" ]; then
     STATS_FILE="${VAULT_DIR}/.sentinel-stats.json"
     TODAY=$(date +%Y-%m-%d)

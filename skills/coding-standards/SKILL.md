@@ -1,5 +1,5 @@
 ---
-name: coding-standards
+name: sentinel-coding-standards
 description: Universal coding standards and best practices. Activates when writing new code, reviewing code quality, refactoring, or enforcing naming, formatting, or structural consistency. Covers immutability, file organization, error handling, input validation, and naming conventions.
 origin: sentinel
 ---

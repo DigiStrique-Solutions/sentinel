@@ -1,9 +1,9 @@
 ---
-name: onboard
+name: sentinel-onboard
 description: Guided team onboarding for new Sentinel users
 ---
 
-# /sentinel:onboard
+# /sentinel-onboard
 
 Walk a new team member through Sentinel setup, team standards, and recent context.
 
@@ -14,11 +14,11 @@ Walk a new team member through Sentinel setup, team standards, and recent contex
 Check that the environment is ready:
 
 - [ ] Sentinel plugin is installed (you're reading this, so it is)
-- [ ] A vault directory exists at `vault/` — if not, tell the user to run `/sentinel:bootstrap` first
+- [ ] A vault directory exists at `vault/` — if not, tell the user to run `/sentinel-bootstrap` first
 - [ ] A team manifest exists at `.claude/shared/manifest.json` or `templates/shared/manifest.json` in the vault — if not, warn that this project may not be using the team preset
 
 If no vault exists, stop and tell the user:
-> "No vault found. Run `/sentinel:bootstrap` and select the **team** preset to set up your project for team collaboration."
+> "No vault found. Run `/sentinel-bootstrap` and select the **team** preset to set up your project for team collaboration."
 
 ### Step 2: Read Required Vault Files
 
@@ -94,7 +94,7 @@ Output a summary:
 >
 > Your work will be automatically tracked in the activity feed.
 > Commits happen automatically when your session ends.
-> Run `/sentinel:health` to check vault status anytime.
+> Run `/sentinel-health` to check vault status anytime.
 
 Count gotchas by listing `vault/gotchas/*.md` (excluding templates).
 Count open investigations by grepping for files without `status: resolved`.

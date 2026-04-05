@@ -1,5 +1,5 @@
 ---
-name: eval-harness
+name: sentinel-eval-harness
 description: Evaluation harness for testing AI agent prompts and outputs against ground truth. Activates when designing eval scenarios, running prompt evaluations, interpreting results, or iterating on agent behavior. Covers scenario design, expectation definition, ground truth generation, regression testing, and convergence loops.
 origin: sentinel
 ---

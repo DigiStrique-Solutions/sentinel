@@ -1,5 +1,5 @@
 ---
-name: brainstorm
+name: sentinel-brainstorm
 description: Structured exploration before implementation. Activates when building new features, making design decisions, or facing multiple valid approaches. Prevents jumping to code before understanding intent. Explores context, asks clarifying questions, proposes approaches, and produces a spec.
 origin: sentinel
 ---

@@ -1,5 +1,5 @@
 ---
-name: context
+name: sentinel-context
 description: Audit all context sources — CLAUDE.md, rules, MCP servers, plugins, hooks, vault — with token estimates and optimization recommendations.
 ---
 
@@ -165,7 +165,7 @@ Based on the audit, generate a prioritized list of recommendations. Only include
 
 - **Reduce vault token budget** — If the session-start output is consistently under budget, lower `SENTINEL_TOKEN_BUDGET` in `.sentinel.json`.
   - Current budget: `<budget>` tokens. Actual usage: `<actual>` tokens.
-  - How: `/sentinel:config set token_budget <lower_value>`
+  - How: `/sentinel-config set token_budget <lower_value>`
 
 - **Resolve open investigations** — Each open investigation consumes tokens at session start. Resolving them moves them to `resolved/` where they're only counted, not loaded.
   - Open: `<count>` investigations consuming ~`<tokens>` tokens
@@ -174,7 +174,7 @@ Based on the audit, generate a prioritized list of recommendations. Only include
 ### Medium Impact (200-1,000 tokens saved)
 
 - **Prune stale gotchas** — Gotchas for code areas that no longer exist waste tokens.
-  - How: Run `/sentinel:prune` to detect and archive stale entries
+  - How: Run `/sentinel-prune` to detect and archive stale entries
 
 - **Disable unused MCP servers** — MCP servers that are never used still contribute tool names to context.
   - Unused candidates: (list any servers whose tools were not invoked in recent sessions)
@@ -183,7 +183,7 @@ Based on the audit, generate a prioritized list of recommendations. Only include
 ### Low Impact (<200 tokens saved)
 
 - **Archive old session recovery files** — Recovery files >7 days old are auto-archived by pruning, but manual cleanup helps if pruning hasn't run.
-  - How: Run `/sentinel:prune` or delete `vault/session-recovery/` files manually
+  - How: Run `/sentinel-prune` or delete `vault/session-recovery/` files manually
 
 ## Output Format
 
@@ -193,5 +193,5 @@ Present the full audit as a formatted report. End with:
 Context Audit Complete
 Total overhead: ~<n> tokens (<n>% of 200K context window)
 Top recommendation: <highest-impact recommendation>
-Run /sentinel:config to adjust settings.
+Run /sentinel-config to adjust settings.
 ```

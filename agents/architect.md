@@ -1,5 +1,5 @@
 ---
-name: architect
+name: sentinel-architect
 description: System design advisor. Evaluates architecture decisions, scalability, separation of concerns, and API design.
 origin: sentinel
 model: sonnet

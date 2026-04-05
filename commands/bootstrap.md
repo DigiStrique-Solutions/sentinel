@@ -1,5 +1,5 @@
 ---
-name: bootstrap
+name: sentinel-bootstrap
 description: Scaffold the Sentinel vault, workflows, and quality gates for a new project. Run once per project.
 ---
 
@@ -185,7 +185,7 @@ Next steps:
 
 For the **team** preset, add:
 ```
-5. Run `/sentinel:onboard` to complete team onboarding
-6. Ask team members to run `/sentinel:onboard` after installing Sentinel
-7. Run `/sentinel:doctor` to verify merge driver configuration
+5. Run `/sentinel-onboard` to complete team onboarding
+6. Ask team members to run `/sentinel-onboard` after installing Sentinel
+7. Run `/sentinel-doctor` to verify merge driver configuration
 ```

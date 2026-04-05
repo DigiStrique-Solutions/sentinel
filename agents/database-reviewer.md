@@ -1,5 +1,5 @@
 ---
-name: database-reviewer
+name: sentinel-database-reviewer
 description: SQL and database specialist. Reviews queries, schema design, migrations, indexes, and data access patterns.
 origin: sentinel
 model: sonnet

@@ -1,5 +1,5 @@
 ---
-name: eject
+name: sentinel-eject
 description: Copy Sentinel plugin contents (hooks, agents, skills, rules) into your project for full customization. After ejecting, the plugin is no longer needed.
 ---
 
