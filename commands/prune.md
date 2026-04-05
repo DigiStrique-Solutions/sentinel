@@ -1,5 +1,5 @@
 ---
-name: sentinel prune
+name: prune
 description: Deep vault cleanup — find duplicates, validate cross-references, archive stale entries, and report vault health. Run monthly or before major feature pushes.
 ---
 

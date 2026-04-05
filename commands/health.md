@@ -1,5 +1,5 @@
 ---
-name: sentinel health
+name: health
 description: Show Sentinel system health — vault status, hook activity, open investigations, stale entries, and coverage gaps.
 ---
 

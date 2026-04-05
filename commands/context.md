@@ -1,5 +1,5 @@
 ---
-name: sentinel context
+name: context
 description: Audit all context sources — CLAUDE.md, rules, MCP servers, plugins, hooks, vault — with token estimates and optimization recommendations.
 ---
 

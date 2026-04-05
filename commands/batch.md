@@ -1,5 +1,5 @@
 ---
-name: sentinel batch
+name: batch
 description: Process a large task by breaking it into work items and grinding through them with sub-agents. For tasks too large for one context window — codemap generation, mass migration, bulk documentation.
 ---
 

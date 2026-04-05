@@ -1,5 +1,5 @@
 ---
-name: sentinel bootstrap
+name: bootstrap
 description: Scaffold the Sentinel vault, workflows, and quality gates for a new project. Run once per project.
 ---
 

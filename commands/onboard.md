@@ -1,5 +1,5 @@
 ---
-name: sentinel onboard
+name: onboard
 description: Guided team onboarding for new Sentinel users
 ---
 

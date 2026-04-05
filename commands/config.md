@@ -1,5 +1,5 @@
 ---
-name: sentinel config
+name: config
 description: Enable/disable optional Sentinel hooks and configure thresholds.
 ---
 
