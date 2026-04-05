@@ -6,6 +6,8 @@ Sentinel is a Claude Code plugin that gives your AI assistant **institutional me
 
 ## What It Does
 
+**Autonomous Execution** — Claude Code often asks users to run commands instead of running them itself. Sentinel fixes this with three layers: (1) a behavioral rule loaded into every session that instructs Claude to execute, never suggest, (2) auto-configured tool permissions in `.claude/settings.json` that eliminate permission prompts for routine dev commands, and (3) CLAUDE.md instructions that survive context compaction. The result: Claude runs tests, lints, builds, and git commands without asking.
+
 **Git Autopilot** — You never touch git. Sentinel auto-creates branches when sessions start and auto-commits when they end. No branch management, no commit messages, no git knowledge required.
 
 **Concurrent Session Isolation** — Run multiple Claude Code agents on the same repo simultaneously. Sentinel detects concurrent sessions, auto-creates git worktrees for isolation, and auto-merges changes back when sessions end. No conflicts, no coordination needed.
@@ -152,9 +154,9 @@ Next session starts → better context loaded
 - `refactor-cleaner` — Dead code removal
 - `ui-reviewer` — Frontend design/UX/a11y review
 
-### Rules (14)
+### Rules (15)
 
-Common rules (8) plus language-specific extensions for Python (3) and TypeScript (3).
+Common rules (9) plus language-specific extensions for Python (3) and TypeScript (3).
 
 ### Commands (11)
 

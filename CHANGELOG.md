@@ -4,6 +4,22 @@ All notable changes to Sentinel will be documented in this file.
 
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.13.0] - 2026-04-05
+
+### Added
+
+- **Autonomous execution** — Three-layer system to eliminate the #1 UX complaint: Claude asking users to run commands instead of running them itself.
+  - **Behavioral rule** (`rules/common/autonomy.md`) — Always-loaded rule that instructs Claude to execute commands, never suggest them. Covers tests, lints, builds, git, file operations, package installs. Clear exceptions for destructive shared ops, secrets, ambiguous intent, and paid actions.
+  - **Permission auto-configuration** (`scripts/configure-permissions.sh`) — During `/sentinel bootstrap`, detects project stack (Python, TypeScript, both) and writes `allowedTools` to `.claude/settings.json`. Pre-approves ~60-90 tool patterns covering pytest, ruff, npm, eslint, tsc, git, file operations, and more. Eliminates permission prompts that cause Claude to fall back to suggesting.
+  - **CLAUDE.md autonomy section** — All 3 CLAUDE.md templates (minimal, standard, team) now include an "Autonomy" section with explicit execute-not-suggest instructions. The Compact Instructions section includes autonomy as the first rule, ensuring it survives context compaction.
+
+### Changed
+
+- Rule count increased from 14 to 15 (9 common + 3 Python + 3 TypeScript)
+- Bootstrap command now includes Step 8b (permission auto-configuration)
+- Test count increased from 181 to 200 (added 16 tests for configure-permissions + 3 for detect-drift)
+- All 3 CLAUDE.md templates updated with Autonomy section and compaction-safe autonomy rule
+
 ## [0.12.1] - 2026-04-03
 
 ### Added

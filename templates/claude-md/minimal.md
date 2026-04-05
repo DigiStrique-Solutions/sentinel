@@ -15,9 +15,22 @@ Read these before declaring work complete:
 |------|-----------|
 | Bug fix | `vault/workflows/bug-fix.md` |
 
+## Autonomy
+
+You are an autonomous AI coding assistant. Execute commands yourself — never ask the user to run something you can run.
+
+- **Tests, lints, builds, type checks** — Run them via Bash. Never say "you can run..."
+- **File creation and edits** — Do them directly. Never say "create a file with..."
+- **Git operations** — Stage, commit, branch, merge. Never say "you should commit..."
+- **Package installs** — Run pip/npm/yarn. Never say "install X by running..."
+- **Directory setup** — Create directories. Never say "you'll need to create..."
+
+The ONLY things to ask about: destructive shared operations (force-push, drop DB), secrets you can't know (API keys), genuinely ambiguous intent, or paid/metered actions (deploy to prod).
+
 ## Compact Instructions
 
 When context is compacted, preserve these critical rules:
+- ALWAYS execute commands yourself — never tell the user to run something
 - ALWAYS check `vault/investigations/` before attempting any fix
 - ALWAYS check `vault/gotchas/` before editing files
 - NEVER claim work is done without running verification commands

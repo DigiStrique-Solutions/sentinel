@@ -527,6 +527,55 @@ Onboarding complete!
 
 ---
 
+### 15. Claude asks you to run commands instead of running them itself
+
+**The problem:** You ask Claude to fix a bug. It finds the issue, writes the fix, and then says: "You can verify this by running `pytest tests/ -x -v`." You copy-paste the command, run it, paste the output back. Claude reads it and says: "Great, now run `ruff check src/` to verify lint passes." Copy, paste, run, paste. You're acting as a human terminal. Claude has a Bash tool — it can run these commands itself. But it doesn't.
+
+This happens for three reasons: (1) Claude's permission mode blocks the command and Claude falls back to suggesting instead of trying a different approach, (2) Claude doesn't know your project's exact test/lint/build commands so it hedges, (3) the model is inherently cautious about executing commands even when they're routine.
+
+**What Sentinel does:** Three layers that eliminate all three causes:
+
+1. **Behavioral rule** (`rules/common/autonomy.md`) — A rule file loaded into every session that explicitly instructs Claude: "Execute commands yourself. Never tell the user to run something you can run." This is always in context and survives compaction via the Compact Instructions section in CLAUDE.md.
+
+2. **Auto-configured permissions** — During `/sentinel bootstrap`, Sentinel detects your stack (Python, TypeScript, or both) and writes tool permissions to `.claude/settings.json`. This pre-approves all standard dev commands — pytest, ruff, npm, eslint, tsc, git operations, file operations — so Claude never hits a permission prompt that causes it to fall back to suggesting.
+
+3. **CLAUDE.md autonomy section** — Every CLAUDE.md template includes an "Autonomy" section with explicit instructions and examples. The Compact Instructions section includes "ALWAYS execute commands yourself — never tell the user to run something" as the first rule, ensuring it survives context compaction.
+
+**What you see:**
+
+During bootstrap:
+```
+Configured 87 tool permissions in .claude/settings.json
+Claude will now execute tests, lints, builds, and git commands autonomously — no permission prompts.
+```
+
+During a session, instead of:
+```
+You can run the tests with:
+  pytest tests/ -x -v
+```
+
+You get:
+```
+[Runs pytest tests/ -x -v]
+All 42 tests pass. Fix verified.
+```
+
+Instead of:
+```
+You'll need to create a .env file with the following values...
+```
+
+You get:
+```
+[Creates .env with defaults]
+Created .env. You'll need to fill in your API_KEY — I can't know that value.
+```
+
+The rule is clear about the four exceptions where asking is correct: destructive shared operations (force-push, drop DB), secrets Claude can't know (API keys), genuinely ambiguous intent, and paid/metered actions (deploy to prod). Everything else — tests, lints, builds, git, file creation, package installs — Claude just does it.
+
+---
+
 ## Commands Reference
 
 | Command | What it does |

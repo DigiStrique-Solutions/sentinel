@@ -132,6 +132,36 @@ Ask: "What's your tech stack?" with options:
 
 Update the CLAUDE.md with the appropriate test/lint commands based on the answer.
 
+## Step 8b: Configure Permissions (Power User Setup)
+
+This step auto-configures `.claude/settings.json` with `allowedTools` so Claude never hits permission walls for routine operations.
+
+Run the configure-permissions script from the Sentinel plugin:
+
+```bash
+bash "${CLAUDE_PLUGIN_ROOT}/scripts/configure-permissions.sh" "$(pwd)" "<stack>" "power-user"
+```
+
+Where `<stack>` is the answer from Step 8 (python, typescript, both, or other).
+
+The script:
+1. Detects the stack from Step 8
+2. Builds a permission list covering all standard dev commands for that stack:
+   - **Common**: git (non-destructive), file operations, search
+   - **Python**: pytest, ruff, mypy, alembic, pip, venv, python
+   - **TypeScript**: npm/yarn/pnpm, jest/vitest/playwright, eslint, tsc, next/vite
+3. Writes or merges into `.claude/settings.json` under `permissions.allow`
+4. Returns the count of permissions configured
+
+This eliminates the #1 cause of Claude asking users to run commands: permission prompts blocking tool calls and causing Claude to fall back to suggesting instead of executing.
+
+After the script runs, tell the user:
+
+```
+Configured N tool permissions in .claude/settings.json
+Claude will now execute tests, lints, builds, and git commands autonomously — no permission prompts.
+```
+
 ## Step 9: Print Summary
 
 Print a summary of what was created:
@@ -140,6 +170,7 @@ Print a summary of what was created:
 - Number of workflows installed
 - Whether CLAUDE.md was created or updated
 - Stack configuration applied
+- Number of tool permissions configured
 
 ## Step 10: Suggest Next Steps
 
