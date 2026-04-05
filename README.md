@@ -32,11 +32,21 @@ Sentinel is a Claude Code plugin that gives your AI assistant **institutional me
 
 ## Install
 
-```bash
-claude plugin add sentinel
+**Step 1: Add the marketplace** (one-time setup)
+
+```
+/plugin marketplace add DigiStrique-Solutions/strique-marketplace
 ```
 
-Then bootstrap your project:
+This registers the Strique plugin registry with your Claude Code installation. You only need to do this once.
+
+**Step 2: Install the plugin**
+
+```
+/plugin install sentinel@strique-marketplace
+```
+
+**Step 3: Bootstrap your project**
 
 ```
 /sentinel bootstrap

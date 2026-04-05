@@ -4,13 +4,21 @@ Sentinel is a Claude Code plugin that gives your AI coding assistant a memory, d
 
 ## Getting Started
 
-Install Sentinel and set up your project in under a minute:
+Install Sentinel and set up your project in under a minute.
+
+**Add the marketplace** (one-time setup — this registers the Strique plugin registry):
 
 ```
-claude plugin add sentinel@strique-marketplace
+/plugin marketplace add DigiStrique-Solutions/strique-marketplace
 ```
 
-Then bootstrap your project:
+**Install the plugin:**
+
+```
+/plugin install sentinel@strique-marketplace
+```
+
+**Bootstrap your project:**
 
 ```
 /sentinel bootstrap
