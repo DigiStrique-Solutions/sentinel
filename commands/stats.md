@@ -7,7 +7,7 @@ description: Show Sentinel effectiveness metrics — vault health, knowledge reu
 
 Show how Sentinel is performing. Read vault data and session history to produce a formatted report.
 
-**Usage:** `/sentinel stats [--period 7d|30d|90d] [--json]`
+**Usage:** `/sentinel:stats [--period 7d|30d|90d] [--json]`
 
 Default period: 30 days. Use `--json` for machine-readable output.
 

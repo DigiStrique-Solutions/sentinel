@@ -89,10 +89,10 @@ Check `.sentinel/sessions/` for stale session files (PIDs that are no longer run
 - Report: `[FIXED] Cleaned up N stale session(s)` or `[PASS] No stale session state`
 
 **Do NOT delete the `.sentinel/` directory itself.** It contains persistent state:
-- `.sentinel/config.json` — user preferences from `/sentinel config`
+- `.sentinel/config.json` — user preferences from `/sentinel:config`
 - `.sentinel/session-count` — pruning counter
-- `.sentinel/loop/` — active loop state from `/sentinel loop`
-- `.sentinel/batch/` — active batch state from `/sentinel batch`
+- `.sentinel/loop/` — active loop state from `/sentinel:loop`
+- `.sentinel/batch/` — active batch state from `/sentinel:batch`
 - `.sentinel/fact-checks.yml` — project-specific fact check rules
 
 ## Step 6: Check CLAUDE.md

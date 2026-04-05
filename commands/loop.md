@@ -7,14 +7,14 @@ description: Run a task repeatedly until a completion condition is met or max it
 
 Run a task in a convergence loop — repeat until done or max iterations reached.
 
-**Usage:** `/sentinel loop "<task>" --until "<condition>" [--max <N>]`
+**Usage:** `/sentinel:loop "<task>" --until "<condition>" [--max <N>]`
 
 **Examples:**
 ```
-/sentinel loop "run ruff check src/ and fix all errors" --until "ruff reports 0 errors" --max 20
-/sentinel loop "run pytest tests/ and fix failing tests" --until "all tests pass" --max 10
-/sentinel loop "run yarn lint and fix issues" --until "yarn lint exits cleanly" --max 15
-/sentinel loop "run the eval scenario e2e-simple-meta in gen-only mode, if rejected read the rejection reasoning and adjust the prompt" --until "verifier accepts" --max 10
+/sentinel:loop "run ruff check src/ and fix all errors" --until "ruff reports 0 errors" --max 20
+/sentinel:loop "run pytest tests/ and fix failing tests" --until "all tests pass" --max 10
+/sentinel:loop "run yarn lint and fix issues" --until "yarn lint exits cleanly" --max 15
+/sentinel:loop "run the eval scenario e2e-simple-meta in gen-only mode, if rejected read the rejection reasoning and adjust the prompt" --until "verifier accepts" --max 10
 ```
 
 ## Step 1: Parse Arguments
@@ -123,7 +123,7 @@ Last attempt: <summary of last attempt>
 Items remaining: <count if applicable>
 
 The state file is preserved at .sentinel/loop/state.json for resumption.
-Run `/sentinel loop --resume` to continue from where you left off.
+Run `/sentinel:loop --resume` to continue from where you left off.
 ```
 
 Do NOT clean up the state file — it enables resumption.
@@ -151,10 +151,10 @@ Consider: manual review, /clear and fresh approach, or adjusting the task.
 
 ## Step 7: Resume (if --resume flag)
 
-If the user runs `/sentinel loop --resume`:
+If the user runs `/sentinel:loop --resume`:
 
 1. Read `.sentinel/loop/state.json`
-2. If no state file exists, say "No loop to resume. Start a new one with `/sentinel loop`."
+2. If no state file exists, say "No loop to resume. Start a new one with `/sentinel:loop`."
 3. If state is `completed`, say "Previous loop already completed successfully."
 4. If state is `running`, `timeout`, or `stuck`:
    - Print the last attempt summary

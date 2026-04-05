@@ -7,15 +7,15 @@ description: Process a large task by breaking it into work items and grinding th
 
 Break a large task into work items and process each one independently. Uses sub-agents for context isolation so a 500K-line codebase doesn't exhaust your context window.
 
-**Usage:** `/sentinel batch "<task>" --target "<glob>" [--output <dir>] [--parallel <N>]`
+**Usage:** `/sentinel:batch "<task>" --target "<glob>" [--output <dir>] [--parallel <N>]`
 
 **Examples:**
 ```
-/sentinel batch "generate a codemap summarizing each file's purpose, exports, and dependencies" --target "src/**/*.py"
-/sentinel batch "add JSDoc comments to all exported functions" --target "src/**/*.ts" --parallel 3
-/sentinel batch "migrate from CommonJS to ESM" --target "src/**/*.js" --output vault/migrations/esm
-/sentinel batch "generate test stubs" --target "src/**/*.py" --output tests/stubs
-/sentinel batch "document each API endpoint" --target "src/controllers/**/*.py"
+/sentinel:batch "generate a codemap summarizing each file's purpose, exports, and dependencies" --target "src/**/*.py"
+/sentinel:batch "add JSDoc comments to all exported functions" --target "src/**/*.ts" --parallel 3
+/sentinel:batch "migrate from CommonJS to ESM" --target "src/**/*.js" --output vault/migrations/esm
+/sentinel:batch "generate test stubs" --target "src/**/*.py" --output tests/stubs
+/sentinel:batch "document each API endpoint" --target "src/controllers/**/*.py"
 ```
 
 ## Step 1: Parse Arguments
@@ -185,14 +185,14 @@ If failed > 0:
 <failed> file(s) failed. Review errors:
   - src/broken.py: <error message>
 
-Re-run failed items with: /sentinel batch --resume <id> --retry-failed
+Re-run failed items with: /sentinel:batch --resume <id> --retry-failed
 ```
 
 Clean up state file only if 0 failures. Preserve it if there were failures (enables retry).
 
 ## Step 7: Resume
 
-If the user runs `/sentinel batch --resume [<id>]`:
+If the user runs `/sentinel:batch --resume [<id>]`:
 
 1. If no id provided, find the most recent state file in `.sentinel/batch/`
 2. Read the state file
@@ -209,7 +209,7 @@ Continue from Step 4.
 
 ## Step 8: List (if --list flag)
 
-If the user runs `/sentinel batch --list`:
+If the user runs `/sentinel:batch --list`:
 
 List all batch state files with their status:
 ```

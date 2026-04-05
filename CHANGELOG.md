@@ -10,7 +10,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), version
 
 - **Autonomous execution** — Three-layer system to eliminate the #1 UX complaint: Claude asking users to run commands instead of running them itself.
   - **Behavioral rule** (`rules/common/autonomy.md`) — Always-loaded rule that instructs Claude to execute commands, never suggest them. Covers tests, lints, builds, git, file operations, package installs. Clear exceptions for destructive shared ops, secrets, ambiguous intent, and paid actions.
-  - **Permission auto-configuration** (`scripts/configure-permissions.sh`) — During `/sentinel bootstrap`, detects project stack (Python, TypeScript, both) and writes `allowedTools` to `.claude/settings.json`. Pre-approves ~60-90 tool patterns covering pytest, ruff, npm, eslint, tsc, git, file operations, and more. Eliminates permission prompts that cause Claude to fall back to suggesting.
+  - **Permission auto-configuration** (`scripts/configure-permissions.sh`) — During `/sentinel:bootstrap`, detects project stack (Python, TypeScript, both) and writes `allowedTools` to `.claude/settings.json`. Pre-approves ~60-90 tool patterns covering pytest, ruff, npm, eslint, tsc, git, file operations, and more. Eliminates permission prompts that cause Claude to fall back to suggesting.
   - **CLAUDE.md autonomy section** — All 3 CLAUDE.md templates (minimal, standard, team) now include an "Autonomy" section with explicit execute-not-suggest instructions. The Compact Instructions section includes autonomy as the first rule, ensuring it survives context compaction.
 
 ### Changed
@@ -55,21 +55,21 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), version
 
 ### Added
 
-- **Effectiveness metrics** (`/sentinel stats`) — Shows whether Sentinel is actually helping, with three data sections:
+- **Effectiveness metrics** (`/sentinel:stats`) — Shows whether Sentinel is actually helping, with three data sections:
   - **Vault Health**: Investigation count and resolution rate, gotcha count with churn (added/removed), decision and pattern counts
   - **Knowledge Reuse**: Gotcha surfacing count (how many times a gotcha was shown before an edit), investigation load count (how many times an investigation was loaded and led to resolution)
   - **Code Discipline**: Test/lint run rates across sessions, conventional commit breakdown, fix-to-feat ratio
   - Supports `--period 7d|30d|90d` time windows and `--json` for machine-readable output
   - Degrades gracefully: vault health always available, reuse/discipline data appears after first few sessions
 
-- **Session stats collection** — Three hooks now track data for `/sentinel stats`:
+- **Session stats collection** — Three hooks now track data for `/sentinel:stats`:
   - `pre-tool-gotcha.sh` — Records gotcha hit count per session
   - `session-start-loader.sh` — Records which investigations were loaded at session start
   - `stop-enforcer.sh` — Aggregates session metrics into `vault/.sentinel-stats.json` before cleanup
 
 ### Changed
 
-- Command count increased from 10 to 11 (added `/sentinel stats`)
+- Command count increased from 10 to 11 (added `/sentinel:stats`)
 
 ## [0.10.0] - 2026-04-02
 
@@ -106,7 +106,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), version
 
 - **`bc` dependency in session-start-loader.sh** — Float comparison for pattern confidence scores used `bc`, which isn't available in minimal Docker images. Replaced with portable `awk` expression.
 
-- **Optional hooks config gap** — 4 optional hooks existed in `hooks/optional/` but weren't registered in `hooks.json`. The `/sentinel config` command saved preferences but nothing activated them. Fixed by registering all optional hooks in `hooks.json` with self-guarding config checks — each script reads `.sentinel/config.json` and exits immediately if not enabled.
+- **Optional hooks config gap** — 4 optional hooks existed in `hooks/optional/` but weren't registered in `hooks.json`. The `/sentinel:config` command saved preferences but nothing activated them. Fixed by registering all optional hooks in `hooks.json` with self-guarding config checks — each script reads `.sentinel/config.json` and exits immediately if not enabled.
 
 - **No LICENSE file** — README said MIT but no LICENSE file existed. Added standard MIT LICENSE.
 
@@ -134,7 +134,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), version
   - Budget reporting: session-start output includes `~N tokens` usage indicator
   - Sections skipped gracefully when budget is exhausted — no silent truncation
 
-- **Context audit command** (`/sentinel context`) — Measure and optimize total context overhead
+- **Context audit command** (`/sentinel:context`) — Measure and optimize total context overhead
   - Analyzes 7 context sources: CLAUDE.md (base + eager loads), global rules, project rules, MCP tool names, plugin metadata, Sentinel session-start output, vault size
   - Reports token estimates for each source as percentage of 200K context window
   - Detects `@` references that could be converted to progressive disclosure
@@ -144,31 +144,31 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), version
 ### Changed
 
 - `session-start-loader.sh` — Fully rewritten with token budget system, priority-based loading, and git-diff relevance filtering
-- Command count increased from 9 to 10 (added `/sentinel context`)
+- Command count increased from 9 to 10 (added `/sentinel:context`)
 
 ## [0.8.0] - 2026-04-02
 
 ### Added
 
-- **Loop execution** (`/sentinel loop`) — Convergence loop for repetitive fix tasks
+- **Loop execution** (`/sentinel:loop`) — Convergence loop for repetitive fix tasks
   - Repeats a task until a completion condition is mechanically verified
   - Detects stalls: stops after 2 iterations with no progress (prevents grinding through identical failures)
   - State file at `.sentinel/loop/state.json` tracks every attempt with results and summaries
-  - Resumable: `/sentinel loop --resume` continues from where it left off after timeout or session restart
+  - Resumable: `/sentinel:loop --resume` continues from where it left off after timeout or session restart
   - Use cases: lint cleanup, test fixes, prompt tuning, coverage improvement
 
-- **Batch execution** (`/sentinel batch`) — Map-reduce for tasks too large for one context window
+- **Batch execution** (`/sentinel:batch`) — Map-reduce for tasks too large for one context window
   - Discovers work items via glob pattern, processes each with isolated sub-agents
   - Each sub-agent gets its own context window — no context exhaustion on large codebases
   - State file at `.sentinel/batch/<id>/state.json` checkpoints after every item
-  - Resumable: `/sentinel batch --resume` continues from last checkpoint, `--retry-failed` retries errors
+  - Resumable: `/sentinel:batch --resume` continues from last checkpoint, `--retry-failed` retries errors
   - Parallel mode: up to 5 concurrent sub-agents via `--parallel N`
   - Generates INDEX.md with results summary and per-file links
   - Use cases: codemap generation for 500K+ line repos, mass migration, bulk documentation, test stub generation
 
 ### Changed
 
-- Command count increased from 7 to 9 (added `/sentinel loop` and `/sentinel batch`)
+- Command count increased from 7 to 9 (added `/sentinel:loop` and `/sentinel:batch`)
 
 ## [0.7.0] - 2026-04-02
 
@@ -235,7 +235,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), version
     - Session-start loader reads last 3 days of activity for team context
     - Auto-pruned: activity files >30 days archived by Tier 1 pruning
   - **Team onboarding** — Guided setup for new team members
-    - `/sentinel onboard` command: reads required vault files, shows recent activity, configures settings, sets up merge driver, suggests first task, marks onboarded
+    - `/sentinel:onboard` command: reads required vault files, shows recent activity, configures settings, sets up merge driver, suggests first task, marks onboarded
     - Passive hook detection: `session-start-loader` nudges un-onboarded members with a one-line reminder each session
     - Non-Claude-Code users get plain text setup instructions
 
@@ -249,7 +249,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), version
 - `session-start-loader.sh` — Loads recent team activity + checks onboarding status
 - `session-start-prune.sh` — Archives activity files >30 days old (Tier 1)
 - `commands/bootstrap.md` — Team preset creates activity dir, copies merge driver, configures .gitattributes
-- Command count increased from 6 to 7 (added `/sentinel onboard`)
+- Command count increased from 6 to 7 (added `/sentinel:onboard`)
 
 ## [0.4.0] - 2026-04-02
 
@@ -293,7 +293,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), version
     - Gotchas where all referenced source files have been deleted
     - Open investigations older than 60 days
     - Learned patterns with 0 observations in 30+ days
-  - **Tier 3 (manual):** `/sentinel prune` command for deep cleanup
+  - **Tier 3 (manual):** `/sentinel:prune` command for deep cleanup
     - Duplicate detection across gotchas, investigations, and decisions
     - Cross-reference validation (file paths still exist?)
     - Pattern health report (confidence scores, observation counts)
@@ -305,7 +305,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), version
 ### Changed
 
 - Hook count increased from 14 to 15 (11 core + 4 optional)
-- Command count increased from 5 to 6 (added `/sentinel prune`)
+- Command count increased from 5 to 6 (added `/sentinel:prune`)
 
 ## [0.2.0] - 2026-04-02
 
