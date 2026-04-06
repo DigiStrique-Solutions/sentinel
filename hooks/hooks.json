@@ -5,6 +5,16 @@
         "hooks": [
           {
             "type": "command",
+            "command": "\"${CLAUDE_PLUGIN_ROOT}/scripts/ensure-deps.sh\"",
+            "timeout": 60000
+          },
+          {
+            "type": "command",
+            "command": "\"${CLAUDE_PLUGIN_ROOT}/hooks/engine/session-start-sync.sh\"",
+            "timeout": 20000
+          },
+          {
+            "type": "command",
             "command": "\"${CLAUDE_PLUGIN_ROOT}/hooks/engine/session-start-isolate.sh\"",
             "timeout": 10000
           },
@@ -60,6 +70,16 @@
           {
             "type": "command",
             "command": "\"${CLAUDE_PLUGIN_ROOT}/hooks/engine/post-tool-tracker.sh\"",
+            "timeout": 3000
+          },
+          {
+            "type": "command",
+            "command": "\"${CLAUDE_PLUGIN_ROOT}/hooks/engine/post-tool-staleness.sh\"",
+            "timeout": 3000
+          },
+          {
+            "type": "command",
+            "command": "\"${CLAUDE_PLUGIN_ROOT}/hooks/engine/post-tool-test-tracker.sh\"",
             "timeout": 3000
           },
           {

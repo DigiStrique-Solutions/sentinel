@@ -4,6 +4,12 @@ All notable changes to Sentinel will be documented in this file.
 
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.13.1] - 2026-04-06
+
+### Fixed
+
+- **Auto-install `jq` dependency** — Sentinel hooks depend on `jq` for JSON parsing but never checked for it, causing cryptic "jq: command not found" errors on fresh installs. A new `ensure-deps.sh` script now runs as the first `SessionStart` hook, auto-installs `jq` via brew/apt/yum/apk if missing, and caches a version-stamped marker so it only runs once per plugin version.
+
 ## [0.13.0] - 2026-04-05
 
 ### Added

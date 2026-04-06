@@ -97,14 +97,60 @@ Session recovery files: 3 (oldest: 5 days)
 
 ## 6. Hook Health
 
-Check `.claude/settings.json` for Sentinel hook references:
-- Are any hooks registered? List active hooks.
+Check `.claude/settings.json` for hook references:
+- Count hooks registered in project settings.json (local hooks)
 - Check for `.sentinel/` temp directory in project root — should not exist between sessions. If it exists, report `[WARN] Stale .sentinel/ directory found. Run /doctor to clean up.`
+
+**Hook Overlap Detection** (critical):
+
+Compare hooks in `.claude/settings.json` (project-local) against Sentinel's plugin `hooks.json`. Detect when both systems run hooks that do the same thing — this doubles timeout budget and causes duplicate state tracking.
+
+For each lifecycle event (SessionStart, PreToolUse, PostToolUse, PreCompact, UserPromptSubmit, Stop), check if local hooks overlap with Sentinel plugin hooks by matching on PURPOSE (not just name). Known overlap pairs:
+
+| Local hook pattern | Sentinel equivalent | Purpose |
+|---|---|---|
+| `session-start-sync` | `session-start-sync` | Config sync |
+| `vault-loader` | `session-start-loader` | Vault context loading |
+| `prompt-vault-checker` | `prompt-vault-search` | Vault search on prompt |
+| `pre-compact-save` | `pre-compact-save` | Save before compaction |
+| `gotcha-check` | `pre-tool-gotcha` | Gotcha injection |
+| `todo-enforcer` | `pre-tool-scope` | Scope/todo nudge |
+| `session-tracker` | `post-tool-tracker` | File modification tracking |
+| `staleness-detector` | `post-tool-staleness` | Stale gotcha detection |
+| `test-validator` | `post-tool-test-tracker` | Test file tracking |
+| `design-reviewer` | `post-tool-design-check` | Frontend design nudge |
+| `bash-test-tracker` | `post-tool-test-watch` | Test failure tracking |
+| `todo-tracker` | `post-tool-todo-mirror` | Todo state mirroring |
+| `stop-session-summary` | `stop-session-summary` | Session summary |
+| `stop-vault-enforcer` | `stop-enforcer` | Quality gate enforcement |
+| `stop-pattern-extractor` | `stop-pattern-extractor` | Pattern extraction |
+
+For each local hook in settings.json, check if a Sentinel plugin hook covers the same purpose. Report:
+
+```
+Hook Overlap Detection
+Local hooks in settings.json:    17
+Sentinel plugin hooks:           25
+Overlapping pairs found:         15    [FAIL] Remove local duplicates
+Non-overlapping local hooks:      2    [WARN] Not covered by Sentinel
+
+Overlapping hooks (remove from settings.json):
+  session-start-sync.sh          ↔  engine/session-start-sync.sh
+  session-start-vault-loader.sh  ↔  engine/session-start-loader.sh
+  ...
+
+Local-only hooks (no Sentinel equivalent):
+  post-tool-connector-validator.sh  — domain-specific, keep in settings.json
+  eval-tests-adversarial.sh         — no plugin equivalent yet
+```
+
+If overlapping hooks are found, report `[FAIL]` with instruction: "Remove duplicate hooks from .claude/settings.json. Sentinel plugin handles these."
 
 ```
 Hook Health
-Registered hooks: 4          [PASS]
-.sentinel/ temp dir: clean   [PASS]
+Local hooks: 17                  [PASS]
+.sentinel/ temp dir: clean       [PASS]
+Hook overlaps: 15                [FAIL] Sentinel plugin duplicates found
 ```
 
 ## 7. CLAUDE.md Integration

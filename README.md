@@ -46,6 +46,8 @@ This registers the Strique plugin registry with your Claude Code installation. Y
 /plugin install sentinel@strique-marketplace
 ```
 
+Sentinel will automatically install required system dependencies (like `jq`) on first session start. If auto-install fails, run `brew install jq` (macOS) or `sudo apt install jq` (Linux) manually.
+
 **Step 3: Bootstrap your project**
 
 ```

@@ -24,6 +24,8 @@ Install Sentinel and set up your project in under a minute.
 /sentinel-bootstrap
 ```
 
+> On first session start, Sentinel auto-installs required system dependencies (like `jq`). If auto-install fails, run `brew install jq` (macOS) or `sudo apt install jq` (Linux) manually.
+
 You'll be asked to choose a preset:
 
 ```
