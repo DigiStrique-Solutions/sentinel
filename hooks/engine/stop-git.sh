@@ -16,6 +16,15 @@ CWD=$(echo "$INPUT" | jq -r '.cwd // empty')
 
 [ -z "$CWD" ] && exit 0
 
+# Check if git autopilot is disabled via config
+CONFIG_FILE="${CWD}/.sentinel/config.json"
+if [ -f "$CONFIG_FILE" ]; then
+    GIT_ENABLED=$(jq -r '.hooks.git_autopilot // true' "$CONFIG_FILE" 2>/dev/null || echo "true")
+    if [ "$GIT_ENABLED" = "false" ]; then
+        exit 0
+    fi
+fi
+
 # Only act inside git repos
 if ! git -C "$CWD" rev-parse --is-inside-work-tree &>/dev/null; then
     exit 0

@@ -14,6 +14,7 @@ Read `.sentinel/config.json` if it exists. If not, use defaults:
 ```json
 {
   "hooks": {
+    "git_autopilot": true,
     "pattern_extraction": false,
     "session_summary": false,
     "vault_search_on_prompt": false,
@@ -35,6 +36,9 @@ Display the current configuration:
 ```
 Sentinel Configuration
 
+Core Hooks:
+  Git Autopilot (auto-branch + auto-commit):  ON
+
 Optional Hooks:
   Pattern extraction on session end:      OFF
   Session summary on session end:         OFF
@@ -50,15 +54,17 @@ Thresholds:
 
 ## Step 3: Configure Hooks
 
-Ask the user which hooks to toggle. Present each optional hook with its current state and a description:
+Ask the user which hooks to toggle. Present each hook with its current state and a description:
 
-1. **Pattern extraction** (stop-pattern-extractor.sh) — When a session ends, automatically extract reusable patterns from the work done and save them to `vault/patterns/learned/`. Useful for building up project-specific knowledge over time.
+1. **Git Autopilot** (session-start-git.sh + stop-git.sh) — Auto-creates a branch when sessions start on main/master, and auto-commits all changes when sessions end. Enabled by default. Disable if you prefer to manage git yourself.
 
-2. **Session summary** (stop-session-summary.sh) — When a session ends, save a summary of what was done to `vault/session-recovery/`. Useful for picking up where you left off in a new session.
+2. **Pattern extraction** (stop-pattern-extractor.sh) — When a session ends, automatically extract reusable patterns from the work done and save them to `vault/patterns/learned/`. Useful for building up project-specific knowledge over time.
 
-3. **Vault search on prompt** (prompt-vault-search.sh) — Before processing each prompt, search `vault/gotchas/` and `vault/investigations/` for relevant entries. Adds latency but prevents repeating known mistakes.
+3. **Session summary** (stop-session-summary.sh) — When a session ends, save a summary of what was done to `vault/session-recovery/`. Useful for picking up where you left off in a new session.
 
-4. **Design review reminder** (post-tool-design-check.sh) — After editing `.tsx` or `.css` files, remind to run design review. Only useful for frontend projects.
+4. **Vault search on prompt** (prompt-vault-search.sh) — Before processing each prompt, search `vault/gotchas/` and `vault/investigations/` for relevant entries. Adds latency but prevents repeating known mistakes.
+
+5. **Design review reminder** (post-tool-design-check.sh) — After editing `.tsx` or `.css` files, remind to run design review. Only useful for frontend projects.
 
 Let the user toggle each one on/off.
 

@@ -10,6 +10,8 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), version
 
 - **Auto-install `jq` dependency** — Sentinel hooks depend on `jq` for JSON parsing but never checked for it, causing cryptic "jq: command not found" errors on fresh installs. A new `ensure-deps.sh` script now runs as the first `SessionStart` hook, auto-installs `jq` via brew/apt/yum/apk if missing, and caches a version-stamped marker so it only runs once per plugin version.
 
+- **Git Autopilot now disableable via `/sentinel-config`** — The GUIDE.md claimed Git Autopilot could be disabled via config, but the implementation didn't support it. Both `session-start-git.sh` and `stop-git.sh` now read `.sentinel/config.json` and respect the `hooks.git_autopilot` flag. The config command now exposes Git Autopilot as the first toggle option.
+
 ## [0.13.0] - 2026-04-05
 
 ### Added
