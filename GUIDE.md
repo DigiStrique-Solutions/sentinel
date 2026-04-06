@@ -40,6 +40,16 @@ Select: standard
 
 That's it. Sentinel is now active. Every session from here on out benefits from institutional memory, quality enforcement, and verification.
 
+### Updating
+
+To update Sentinel to the latest version:
+
+```
+claude plugin update sentinel@strique-marketplace
+```
+
+Your vault, workflows, and project configuration are preserved — only the plugin code (hooks, rules, scripts, skills) is updated.
+
 ---
 
 ## The Problems Sentinel Solves

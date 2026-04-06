@@ -62,6 +62,16 @@ This scaffolds a `vault/` directory, quality gates, and workflows tailored to yo
 | **standard** | Full vault + 13 workflows + quality gates + CLAUDE.md | Solo developers |
 | **team** | Standard + shared sync + team onboarding | Teams |
 
+## Update
+
+To update Sentinel to the latest version:
+
+```
+claude plugin update sentinel@strique-marketplace
+```
+
+Your vault, workflows, and project configuration are preserved — only the plugin code (hooks, rules, scripts, skills) is updated.
+
 ## Core Concepts
 
 ### The Vault
