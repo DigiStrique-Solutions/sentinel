@@ -189,8 +189,9 @@ Next session starts → better context loaded
 - `prompt-vault-search` — Searches vault for relevant context on user prompts
 - `post-tool-design-check` — Reminds to run design review after frontend edits
 
-### Skills (11)
+### Skills (25)
 
+**Methodology skills (9)**
 - `brainstorm` — Structured exploration before implementation (context, clarify, propose, spec)
 - `sentinel-methodology` — Core methodology (investigations, self-healing, gates)
 - `quality-patterns` — Anti-patterns and test standards
@@ -200,8 +201,26 @@ Next session starts → better context loaded
 - `adversarial-eval` — Convergence protocol for finding flaws
 - `system-prompt-create` — Author production-quality system prompts for AI agents (guided interview, structured drafting, self-review, optional adversarial grill mode)
 - `skill-audit` — Audit Claude Code skills via deterministic linter + adversarial griller; complements `anthropic-skills:skill-creator` (which is auto-installed alongside Sentinel)
-- `workflow-runner` — Execution protocol for Sentinel workflow skills: creates run directories, checkpoints progress, persists state across sessions, supports resumption
-- `workflow-bug-fix` — Disciplined bug-fix workflow (6 steps: understand → reproduce → failing test → fix → verify → heal vault) — the canonical example of a first-class workflow skill
+
+**Workflow infrastructure (1)**
+- `workflow-runner` — Execution protocol that drives any workflow skill: creates run directories, checkpoints progress, persists state across sessions, supports idempotent resumption via artifact markers
+
+**Workflow skills (15)** — first-class, auto-activating, stateful, resumable
+- `workflow-bug-fix` — Investigation-first bug-fix workflow with the Iron Law and escalation gates
+- `workflow-new-feature` — Research → Plan → Tests (RED) → Implementation (GREEN) → Refactor → Verify → Document
+- `workflow-feature-improvement` — Understand current behavior → make minimal changes → verify no regression
+- `workflow-refactor` — Behavior-preserving refactor with test safety net
+- `workflow-code-review` — Self-review → general → language → domain → resolve (with severity-labeled findings)
+- `workflow-new-endpoint` — Full-stack endpoint addition spanning backend (entity → repository → service → controller → tests) and frontend (client → hook → component → route)
+- `workflow-database-migration` — Schema change workflow with rollback verification (path-scoped to `migrations/**` and `*.sql`)
+- `workflow-e2e-test` — End-to-end test authoring with Page Object Model, wait strategies, artifacts (path-scoped to `**/e2e/**`, `cypress/**`, `playwright/**`)
+- `workflow-dependency-update` — Package update workflow: audit → classify → update → verify → document
+- `workflow-performance-investigation` — Baseline-driven perf workflow — no optimization without before/after numbers
+- `workflow-security-audit` — OWASP Top 10 audit with automated scanning and findings triage
+- `workflow-prompt-engineering` — Prompt authoring workflow with adversarial testing and iteration
+- `workflow-research-spike` — Time-boxed exploration → synthesize → recommendation or ADR
+- `workflow-incident-response` — Production incident workflow with severity triage and speed discipline
+- `workflow-vault-maintenance` — Meta-workflow for vault hygiene, invoked as a sub-step by other workflows
 
 ### Agents (8)
 

@@ -28,6 +28,38 @@ Explicitly out of scope: parallel iterations, multi-metric optimization, auto-ge
 - Command count: 11 → 12.
 - README updated with the new command and a credit link to Karpathy's autoresearch.
 
+## [0.18.0] - 2026-04-09
+
+### Added
+
+- **Workflows phase 2: migrated all 14 remaining templates to first-class workflow skills.** The workflow runner protocol shipped in 0.17.0 proved out on bug-fix; this release applies the same transformation mechanically to the rest of the workflow catalog. All 15 workflows are now first-class Claude Code skills with auto-activation, progressive disclosure, per-run state persistence, observability, and cross-session resumption. The linter passes cleanly on all 16 workflow skills (runner + 15 workflows).
+
+  **New workflow skills:**
+  - `sentinel-workflow-new-feature` — Research → Plan → Tests (RED) → Implementation (GREEN) → Refactor → Verify → Document
+  - `sentinel-workflow-feature-improvement` — Understand current behavior → make minimal changes → verify no regression
+  - `sentinel-workflow-refactor` — Behavior-preserving refactor with test safety net
+  - `sentinel-workflow-code-review` — Self-review → general → language → domain → parallel execution → resolve
+  - `sentinel-workflow-new-endpoint` — Full-stack endpoint addition (9 steps spanning backend entity → repository → service → controller → tests and frontend client → hook → component → route)
+  - `sentinel-workflow-database-migration` — Schema change with rollback verification. **Path-scoped** to `migrations/** **/migrations/** **/*.sql db/**` so it only auto-activates in the relevant subtree.
+  - `sentinel-workflow-e2e-test` — E2E authoring with Page Object Model, wait strategies, artifacts. **Path-scoped** to `**/e2e/** **/*.e2e.* **/playwright/** **/cypress/** tests/e2e/**`.
+  - `sentinel-workflow-dependency-update` — Audit → classify (patch/minor/major/security) → update → verify → document
+  - `sentinel-workflow-performance-investigation` — Baseline-first perf workflow. Iron Law: no optimization without before/after numbers.
+  - `sentinel-workflow-security-audit` — OWASP Top 10 audit with automated scanning and findings triage
+  - `sentinel-workflow-prompt-engineering` — Prompt authoring with adversarial testing and iteration
+  - `sentinel-workflow-research-spike` — Time-boxed exploration with ADR output
+  - `sentinel-workflow-incident-response` — Production incident workflow with severity triage and speed discipline
+  - `sentinel-workflow-vault-maintenance` — Meta-workflow for vault hygiene, invoked as a sub-step by other workflows
+
+  Each migrated workflow preserves the original template content verbatim (checkboxes, prose, decision trees, escalation gates, cross-references) and layers on the runner protocol: `workflow: true` frontmatter, explicit `workflow-state.sh` calls at every step boundary, per-step artifact writing for idempotent resumption, and softened ALL-CAPS emphasis (changed to italics per the skill-audit style guide — only domain-correct acronyms like RED/GREEN/CRITICAL/HIGH remain in caps).
+
+  **Additive migration preserved:** `templates/workflows/` and `/sentinel-bootstrap`'s copy-to-vault behavior are unchanged. Users who already have `vault/workflows/*.md` from a previous bootstrap continue to work as before. The first-class workflow skills live alongside and auto-activate from description matches; over time, users can delete the vault copies if they prefer to rely on the plugin-shipped versions.
+
+### Changed
+
+- **`skill-audit` linter common-acronym allowlist expanded** with severity and priority labels (`CRITICAL`, `HIGH`, `MEDIUM`, `LOW`, `SEVERE`, `BLOCKER`, `MAJOR`, `MINOR`, `P0`–`P3`, `SEV1`–`SEV3`) and additional security terms (`SSRF`, `IDOR`, `PII`, `PHI`, `RBAC`, `ACL`, `CSP`, `HSTS`). These are domain-correct terminology for code review, security audit, and incident response workflows and were generating false BD003 positives.
+- **`sentinel-workflow-performance-investigation`** `allowed-tools` upgraded from read-only (`Read Grep Glob Bash TodoWrite`) to edit-capable (`Read Grep Glob Bash Edit Write MultiEdit TodoWrite`) since step 4 actually applies fixes.
+- Skill count: 11 → 25 (9 methodology + 1 workflow runner + 15 workflow skills).
+
 ## [0.17.0] - 2026-04-09
 
 ### Added

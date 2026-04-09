@@ -234,7 +234,11 @@ def check_body(body: str, body_start_line: int, findings: List[Finding]) -> None
         "TDD", "BDD", "DDD", "RED", "GREEN", "REFACTOR", "STOP", "PASS", "FAIL",
         "ALL", "NONE", "TODO", "FIXME", "NOTE", "HACK", "XXX",
         # Security / audit
-        "OWASP", "CVE", "CWE", "DDOS", "XSS", "CSRF", "CORS",
+        "OWASP", "CVE", "CWE", "DDOS", "XSS", "CSRF", "CORS", "SSRF", "IDOR",
+        "PII", "PHI", "RBAC", "ACL", "CSP", "HSTS",
+        # Severity / priority labels (code review, security audit, incident response)
+        "CRITICAL", "HIGH", "MEDIUM", "LOW", "SEVERE", "BLOCKER", "MAJOR", "MINOR",
+        "P0", "P1", "P2", "P3", "SEV1", "SEV2", "SEV3",
         # Git / VCS
         "DIFF", "HEAD", "MERGE", "COMMIT",
     }
