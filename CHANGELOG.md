@@ -6,6 +6,8 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), version
 
 ## [Unreleased]
 
+## [0.19.0] - 2026-04-09
+
 ### Added
 
 - **`/sentinel-uninstall` command** — interactive cleanup tool that reverts every project and home-directory mutation Sentinel made, so users can actually remove the plugin without leaving orphaned state behind. Before this, `claude plugin uninstall` removed the plugin files but left `vault/`, `.sentinel/`, CLAUDE.md sections, `.claude/settings.json` permission entries, `.gitattributes` merge driver lines, `git config merge.sentinel-vault.driver`, `scripts/vault-merge-driver.sh`, `.claude/shared/`, and dozens of `sentinel/*`/`autoresearch/*` branches as pollution. The new command walks the user through every category interactively with keep/delete/revert options, refuses to run against a dirty git tree, creates a mandatory backup tarball at `~/.sentinel/backups/` before any destructive action, and defaults conservatively (vault → keep, pollution → revert, ejected files → keep). Supports `--dry-run` to preview without changes, `--all` to skip prompts and apply safe defaults, and `--global` to also clean up `~/.sentinel/` plus the global vault (with an extra "type the phrase" confirmation).
@@ -40,8 +42,12 @@ Explicitly out of scope: parallel iterations, multi-metric optimization, auto-ge
 
 ### Changed
 
-- Command count: 11 → 12.
-- README updated with the new command and a credit link to Karpathy's autoresearch.
+- **README command inventory reconciled with ground truth.** The README's `### Commands` section had accumulated drift from 0.16.0 onwards and was listing 12 when the repo actually shipped 16. Missing entries: `/sentinel-uninstall` (new this release), `/sentinel-workflow` (shipped in 0.17.0), `/sentinel-promote` and `/sentinel-global-init` (shipped in 0.16.0). Added all four with one-line descriptions and updated the section heading to `### Commands (16)`. The project-rule on docs drift (*"Any new command, hook, or skill must be reflected in README.md's feature list AND GUIDE.md walkthrough"*) now holds.
+- README updated with `/sentinel-autoresearch` and a credit link to Karpathy's autoresearch.
+
+### Fixed
+
+- **`tests/hooks/session-start-loader.bats` test isolation.** Tests `exits gracefully when vault dir missing` and `empty vault produces no output` failed on any developer machine where the user had run `/sentinel-global-init`. The tests' `setup()` did not override `$HOME`, so `resolve_global_vault()` resolved to the real `~/.sentinel/vault/` and leaked the developer's personal gotchas/decisions into the hook's output, breaking both `assert_output ""` checks. Fixed by exporting `HOME="${BATS_TEST_TMPDIR}/home"` in the file's `setup()` — isolated, minimal, does not affect any of the other 19 tests in the file (none reference `$HOME`). Pre-existing bug introduced when the global vault feature landed in 0.16.0 and not caught because CI presumably ran with a clean `$HOME`. Surfaced during the 0.19.0 pre-release BATS gate.
 
 ## [0.18.0] - 2026-04-09
 

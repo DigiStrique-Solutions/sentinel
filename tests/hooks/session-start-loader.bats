@@ -7,6 +7,12 @@ HOOK="${SENTINEL_ROOT}/hooks/engine/session-start-loader.sh"
 setup() {
     export PROJECT_DIR="${BATS_TEST_TMPDIR}/project"
     mkdir -p "$PROJECT_DIR"
+    # Isolate HOME so resolve_global_vault() does not pick up the user's
+    # real ~/.sentinel/vault/ and leak gotchas/decisions into tests that
+    # assert empty output. Without this, tests 79 and 80 fail on any
+    # machine where the developer has run /sentinel-global-init.
+    export HOME="${BATS_TEST_TMPDIR}/home"
+    mkdir -p "$HOME"
     VAULT_DIR=$(create_test_vault "$PROJECT_DIR")
     init_test_git_repo "$PROJECT_DIR"
 }

@@ -262,7 +262,7 @@ Next session starts → better context loaded
 
 Common rules (9) plus language-specific extensions for Python (3) and TypeScript (3).
 
-### Commands (12)
+### Commands (16)
 
 - `/sentinel-bootstrap` — Scaffold vault and workflows for a new project
 - `/sentinel-health` — Dashboard showing vault health metrics
@@ -276,6 +276,10 @@ Common rules (9) plus language-specific extensions for Python (3) and TypeScript
 - `/sentinel-autoresearch` — Score-driven optimization loop with git-backed keep/discard and an append-only ledger. Tune prompts, fix lint, optimize perf — anything measurable by one number. Inspired by [karpathy/autoresearch](https://github.com/karpathy/autoresearch)
 - `/sentinel-context` — Audit all context sources with token estimates and optimization recommendations
 - `/sentinel-stats` — Effectiveness metrics: vault health, knowledge reuse rates, code discipline trends
+- `/sentinel-workflow` — List, inspect, resume, start, or abort Sentinel workflow runs (use to see active runs, continue an interrupted workflow, or explicitly start a manual-only workflow)
+- `/sentinel-global-init` — Scaffold a personal global vault at `~/.sentinel/vault/` for cross-repo knowledge that applies across all your projects
+- `/sentinel-promote` — Move a vault file from the repo vault to the global vault (for knowledge that applies across repos)
+- `/sentinel-uninstall` — Cleanly uninstall Sentinel by reverting every mutation it made to your project, with mandatory backups and per-category confirmation. Run this BEFORE `claude plugin uninstall sentinel@strique-marketplace`
 
 ### Workflows (13)
 
