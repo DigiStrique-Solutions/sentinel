@@ -400,15 +400,17 @@ You never run `git add`, `git commit`, `git push`, or write a commit message. It
 
 ---
 
-### 11. The task is too large for one context window
+### 11. The task is too large for one context window, or needs many measurable iterations to converge
 
-**The problem:** You need to generate documentation for a 500,000-line codebase, or migrate 200 files from one pattern to another, or add type annotations to every function in the project. Claude runs out of context after processing 20 files and the other 180 are untouched.
+**The problem:** You need to generate documentation for a 500,000-line codebase, migrate 200 files from one pattern to another, or add type annotations to every function. Or a different shape of the same problem: you want to tune a prompt, reduce lint errors to zero, or shave seconds off a test suite — no single edit is the answer; you need to iterate, measure, and keep what works.
 
-**What Sentinel does:** Two commands for large tasks:
+**What Sentinel does:** Three commands for this class of task:
 
 **`/sentinel-batch`** breaks a massive task into independent work items. Each item is processed by a sub-agent with its own context window. Progress is checkpointed after every item, so if the session crashes, you resume from the last checkpoint — not from the beginning.
 
 **`/sentinel-loop`** repeats a task until a completion condition is mechanically verified. It detects stalls — if two consecutive iterations make no progress, it stops instead of grinding through identical failures.
+
+**`/sentinel-autoresearch`** runs a score-driven autonomous optimization loop with git-backed keep/discard and an append-only TSV ledger. Give it a `--task` and a `--score` shell command that prints one number. On each iteration, a sub-agent proposes one focused edit, the loop runs the score command, and either commits to a run branch (`autoresearch/<run-id>`) if the score improved or does `git reset --hard HEAD` if it didn't. Every attempt — kept, discarded, or errored — is appended as a row to `.sentinel/autoresearch/<run-id>/attempts.tsv` so you get a complete audit trail of what was tried and why it was kept or thrown away. Two modes: `all-pass` stops when a target is reached, `budget` runs until a wall-clock budget elapses and keeps hunting for aggregate improvements even after everything is "passing." Directly inspired by [Karpathy's autoresearch](https://github.com/karpathy/autoresearch).
 
 **What you see:**
 
@@ -466,6 +468,38 @@ Loop STUCK — no progress for 2 iterations.
 Items remaining: 3
 This usually means the remaining issues require a different approach.
 ```
+
+For score-driven autoresearch:
+```
+/sentinel-autoresearch \
+  --task "Fix ruff lint errors in src/services/ without relaxing rules" \
+  --score "ruff check src/services/ 2>&1 | grep -cE '^src/' || echo 0" \
+  --objective min --mode all-pass --max 30 --target 0
+
+Baseline score: 47
+Branch: autoresearch/2026-04-09-1430-fix-ruff
+Starting loop — objective=min, mode=all-pass, target=0, max=30.
+
+[autoresearch] iter 5/30   best=38   kept=4  discarded=1  errors=0  elapsed=00:01:12
+[autoresearch] iter 10/30  best=22   kept=7  discarded=3  errors=0  elapsed=00:02:34
+[autoresearch] iter 15/30  best=8    kept=11 discarded=3  errors=1  elapsed=00:03:49
+[autoresearch] iter 18/30  best=0    kept=13 discarded=4  errors=1  elapsed=00:04:22
+
+=== autoresearch run complete ===
+Run: 2026-04-09-1430-fix-ruff
+Status: completed
+Baseline → Best: 47 → 0   (Δ -47)
+Iterations: 18 (kept: 13, discarded: 4, errors: 1)
+Branch: autoresearch/2026-04-09-1430-fix-ruff  (13 commits)
+Ledger: .sentinel/autoresearch/2026-04-09-1430-fix-ruff/attempts.tsv
+
+Next steps:
+  • Review the commits:  git log autoresearch/2026-04-09-1430-fix-ruff --oneline
+  • Merge if happy:       git checkout main && git merge autoresearch/2026-04-09-1430-fix-ruff
+  • Drop the whole run:   git branch -D autoresearch/2026-04-09-1430-fix-ruff
+```
+
+The ledger (`attempts.tsv`) gives you a complete audit trail — every attempt, its score, whether it was kept, and the commit SHA if it was. Use `grep`, `awk`, `pandas`, or `sqlite3` to analyze which prompt edits actually moved the needle. Never auto-merged: the run branch stays put until you decide what to do with it.
 
 ---
 
@@ -644,6 +678,7 @@ The rule is clear about the four exceptions where asking is correct: destructive
 | `/sentinel-prune` | Deep vault cleanup: duplicates, dead references, archive management |
 | `/sentinel-loop` | Repeat a task until a condition is met (lint cleanup, test fixes) |
 | `/sentinel-batch` | Break a massive task into work items with sub-agents (bulk docs, migrations) |
+| `/sentinel-autoresearch` | Score-driven autonomous optimization loop with git-backed keep/discard and a TSV ledger (prompt tuning, lint reduction, perf, any metric) |
 | `/sentinel-onboard` | Guided setup for new team members |
 | `/sentinel-eject` | Copy all plugin files into your project for full customization |
 
@@ -677,7 +712,7 @@ The core features (vault, investigations, git autopilot, concurrent isolation, b
 Yes. Git Autopilot and concurrent isolation are separate hooks. You can disable them via `/sentinel-config` and still benefit from the vault, quality gates, and verification.
 
 **Does Sentinel modify my code?**
-Never. Sentinel only reads your code (for drift detection, fact checking, and impact analysis). It writes to the `vault/` directory and `.sentinel/` tracking directory — never to your source files.
+Automatic hooks never modify your source files. They only read your code for drift detection, fact checking, and impact analysis, and write to `vault/` and `.sentinel/`. The only time Sentinel touches your source is when you explicitly run a command that says it will — `/sentinel-autoresearch` is the clearest example: it runs an autonomous optimization loop that edits files, but every change lands on a dedicated `autoresearch/<run-id>` branch that is never auto-merged into your working branch. You review and merge (or discard) manually.
 
 **What if I don't like a quality gate warning?**
 Warnings are advisory, not blocking. Sentinel exits with code 0 regardless — it tells you what it found, and you decide what to act on.
