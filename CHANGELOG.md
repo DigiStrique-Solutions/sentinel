@@ -4,6 +4,18 @@ All notable changes to Sentinel will be documented in this file.
 
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.15.0] - 2026-04-09
+
+### Added
+
+- **`skill-audit` skill** — Static + adversarial review tool for Claude Code skills, complementing `anthropic-skills:skill-creator`. Two layers: (1) a deterministic Python linter (`scripts/lint_skill.py`) that catches frontmatter violations, line-count overflow, broken markdown links, orphan bundled files, ALL-CAPS bombing, rigid directives, time-sensitive language, Windows-style paths, missing TOCs on long reference files, and chained references — exits non-zero on errors; (2) an LLM-based `griller` subagent that runs nine adversarial review lenses against the SKILL.md (description quality, body clarity, progressive disclosure, tool/script design, anti-pattern scan, adversarial scenarios, stop conditions, skill-vs-built-in competition, the "rule of three" for script bundling). Reference docs include the full lint-rule catalog with rationale and a 20+ entry anti-pattern catalog with BAD/GOOD examples. Self-applicable: skill-audit can audit itself, including this build.
+- **Auto-install `anthropic-skills` plugin** — New SessionStart hook (`scripts/ensure-skill-creator.sh`) that idempotently installs the official `anthropic-skills` plugin (which provides `skill-creator`) if it's not already present. Sentinel's `skill-audit` is designed to compose with `skill-creator`, so installing them together gives users the full skill-authoring + auditing workflow out of the box. Hook is idempotent (version-stamped marker), fails soft (never blocks session start), and falls back to a clear manual-install message if the `claude` CLI isn't available.
+
+### Changed
+
+- Skill count: 8 → 9.
+- README install section now documents both the `anthropic-skills` auto-install and the manual fallback.
+
 ## [0.14.0] - 2026-04-09
 
 ### Added

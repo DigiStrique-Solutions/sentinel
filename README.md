@@ -48,6 +48,15 @@ This registers the Strique plugin registry with your Claude Code installation. Y
 
 Sentinel will automatically install required system dependencies (like `jq`) on first session start. If auto-install fails, run `brew install jq` (macOS) or `sudo apt install jq` (Linux) manually.
 
+Sentinel will also auto-install the official `anthropic-skills` plugin on first session start, since the `skill-audit` skill composes with `skill-creator` for the full skill-authoring workflow. If auto-install fails:
+
+```
+/plugin install anthropic-skills@claude-plugins-official
+/reload-plugins
+```
+
+The `claude-plugins-official` marketplace is pre-registered in Claude Code, so no extra `marketplace add` step is needed.
+
 **Step 3: Bootstrap your project**
 
 ```
@@ -155,7 +164,7 @@ Next session starts → better context loaded
 - `prompt-vault-search` — Searches vault for relevant context on user prompts
 - `post-tool-design-check` — Reminds to run design review after frontend edits
 
-### Skills (8)
+### Skills (9)
 
 - `brainstorm` — Structured exploration before implementation (context, clarify, propose, spec)
 - `sentinel-methodology` — Core methodology (investigations, self-healing, gates)
@@ -165,6 +174,7 @@ Next session starts → better context loaded
 - `eval-harness` — AI prompt/agent evaluation framework
 - `adversarial-eval` — Convergence protocol for finding flaws
 - `system-prompt-create` — Author production-quality system prompts for AI agents (guided interview, structured drafting, self-review, optional adversarial grill mode)
+- `skill-audit` — Audit Claude Code skills via deterministic linter + adversarial griller; complements `anthropic-skills:skill-creator` (which is auto-installed alongside Sentinel)
 
 ### Agents (8)
 

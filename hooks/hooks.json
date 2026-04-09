@@ -10,6 +10,11 @@
           },
           {
             "type": "command",
+            "command": "\"${CLAUDE_PLUGIN_ROOT}/scripts/ensure-skill-creator.sh\"",
+            "timeout": 60000
+          },
+          {
+            "type": "command",
             "command": "\"${CLAUDE_PLUGIN_ROOT}/hooks/engine/session-start-sync.sh\"",
             "timeout": 20000
           },
