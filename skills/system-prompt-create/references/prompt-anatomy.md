@@ -2,6 +2,23 @@
 
 The 10-section structure for agent system prompts. This is a checklist, not a template — cut sections that don't apply.
 
+## Table of Contents
+
+1. [Identity / Role](#1-identity--role)
+2. [Environment / Context](#2-environment--context)
+3. [Primary Objective](#3-primary-objective)
+4. [Capabilities and Tools](#4-capabilities-and-tools)
+5. [Workflow / Methodology](#5-workflow--methodology)
+6. [Eagerness Dial](#6-eagerness-dial)
+7. [Constraints and Guardrails](#7-constraints-and-guardrails)
+8. [Output Format](#8-output-format)
+9. [Examples (Few-Shot)](#9-examples-few-shot)
+10. [Stop Conditions](#10-stop-conditions)
+- [Cache-friendly ordering](#cache-friendly-ordering-for-production-prompts)
+- [Length](#length)
+
+---
+
 Sections can be ordered freely, but the typical order below tends to read well: identity → context → objective → capabilities → workflow → behavior dials → constraints → output → examples → completion.
 
 Use either XML tags (`<instructions>`, `<example>`) or Markdown headers. Both work — just be internally consistent within a single prompt.

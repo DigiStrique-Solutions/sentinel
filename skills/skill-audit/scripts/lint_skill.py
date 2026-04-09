@@ -272,8 +272,15 @@ def check_body(body: str, body_start_line: int, findings: List[Finding]) -> None
 
 
 def strip_code_blocks(text: str) -> str:
-    """Remove fenced code blocks so checks don't false-positive on code."""
-    return re.sub(r"```.*?```", "", text, flags=re.DOTALL)
+    """Remove fenced code blocks AND inline backtick code spans so checks
+    don't false-positive on code/quoted examples. Inline spans matter because
+    pedagogical content frequently quotes anti-pattern strings (e.g.,
+    `"CRITICAL: YOU MUST"`) as negative examples."""
+    # Fenced blocks first (multiline)
+    text = re.sub(r"```.*?```", "", text, flags=re.DOTALL)
+    # Then inline single-backtick spans
+    text = re.sub(r"`[^`\n]*`", "", text)
+    return text
 
 
 # ----------------------------------------------------------------------------

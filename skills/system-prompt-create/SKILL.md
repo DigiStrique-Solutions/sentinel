@@ -22,8 +22,8 @@ Be flexible. Some users want a tight, surgical prompt for a production agent —
 Internalize these before drafting anything. They come from the most current best practices (Anthropic's context-engineering docs, Claude 4.6 best practices, OpenAI's GPT-5 prompting guide, and analysis of leaked production prompts):
 
 - **Right altitude.** The goal is "the smallest set of high-signal tokens that maximize the desired outcome." Specific enough to guide, flexible enough to generalize. Avoid both edge-case stuffing and vague platitudes.
-- **Calm beats aggressive.** Modern models (Claude 4.6, GPT-5) overtrigger on "CRITICAL: YOU MUST" patterns. Use declarative, normal language. "Use this tool when..." beats "CRITICAL: ALWAYS USE THIS TOOL."
-- **Explain the why.** A reason lets the model generalize to unanticipated cases. "Never use ellipses because the response will be read by a TTS engine that can't pronounce them" beats "NEVER use ellipses."
+- **Calm beats aggressive.** Modern models (Claude 4.6, GPT-5) overtrigger on `"CRITICAL: YOU MUST"` patterns. Use declarative, normal language. `"Use this tool when..."` beats `"CRITICAL: ALWAYS USE THIS TOOL."`
+- **Explain the why.** A reason lets the model generalize to unanticipated cases. `"Never use ellipses because the response will be read by a TTS engine that can't pronounce them"` beats `"NEVER use ellipses."`
 - **Positive framing.** "Respond in flowing prose paragraphs" beats "Don't use markdown."
 - **No contradictions.** GPT-5 burns reasoning tokens trying to reconcile contradictory instructions. Review the whole prompt for consistency before shipping.
 - **Trust the model.** Don't add defensive padding for cases that can't happen. The right amount of complexity is what the task actually requires.
@@ -93,7 +93,7 @@ For each section you write, ask yourself: *would a new colleague know what to do
 Before showing the user, run through this checklist. Read `references/anti-patterns.md` for the full list with BAD/GOOD examples.
 
 - [ ] **Contradictions** — read the whole prompt; flag any sections that conflict
-- [ ] **ALL-CAPS / "CRITICAL: YOU MUST"** — replace with calm declarative language unless the user specifically requested emphasis
+- [ ] `ALL-CAPS` / `"CRITICAL: YOU MUST"` — replace with calm declarative language unless the user specifically requested emphasis
 - [ ] **Negative-only instructions** — convert "don't do X" to "do Y" wherever possible
 - [ ] **Vague language** — "be helpful," "use best judgment," "as appropriate" — replace with concrete behaviors
 - [ ] **Missing why** — every non-obvious instruction should have a brief reason

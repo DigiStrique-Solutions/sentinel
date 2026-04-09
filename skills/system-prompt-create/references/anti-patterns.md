@@ -2,6 +2,25 @@
 
 The most common ways agent prompts go wrong, with BAD and GOOD examples for each. Use this as the basis for self-review and grill mode.
 
+## Table of Contents
+
+1. [ALL-CAPS / CRITICAL Bombing](#1-all-caps--critical-bombing)
+2. [Negative-Only Instructions](#2-negative-only-instructions)
+3. [Vague Language](#3-vague-language)
+4. [Missing the "Why"](#4-missing-the-why)
+5. [Defensive Padding](#5-defensive-padding)
+6. [Edge-Case Stuffing](#6-edge-case-stuffing)
+7. [Contradictions](#7-contradictions)
+8. [Eagerness Mismatch](#8-eagerness-mismatch)
+9. [Tool Description Mush](#9-tool-description-mush)
+10. [No Stop Conditions](#10-no-stop-conditions)
+11. [No Escape Hatches](#11-no-escape-hatches)
+12. [Trust Boundary Confusion](#12-trust-boundary-confusion)
+13. [Style Drift Between Prompt and Output](#13-style-drift-between-prompt-and-output)
+14. [Over-Delegation to Sub-Agents](#14-over-delegation-to-sub-agents)
+15. [Padding with Speculative Capabilities](#15-padding-with-speculative-capabilities)
+- [Quick Self-Review Checklist](#quick-self-review-checklist)
+
 ---
 
 ## 1. ALL-CAPS / CRITICAL Bombing

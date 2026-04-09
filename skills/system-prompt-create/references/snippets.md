@@ -2,6 +2,21 @@
 
 Battle-tested snippets you can drop into a system prompt. These come from Anthropic's official Claude 4.6 best practices, OpenAI's GPT-5 prompting guide, and observed patterns in production agent prompts.
 
+## Table of Contents
+
+- [Eagerness Dials](#eagerness-dials)
+- [Reversibility-Categorized Guardrails](#reversibility-categorized-guardrails)
+- [Output Format Steering](#output-format-steering)
+- [Tool Usage](#tool-usage)
+- [Avoiding Over-Engineering](#avoiding-over-engineering)
+- [Context and Memory](#context-and-memory)
+- [Trust Boundaries (for prompt injection resistance)](#trust-boundaries-for-prompt-injection-resistance)
+- [Reasoning Style](#reasoning-style)
+- [Tone Steering](#tone-steering)
+- [Picking snippets](#picking-snippets)
+
+---
+
 When using a snippet, adapt the wording to match the surrounding prompt's voice — don't paste verbatim if the rest of the prompt has a different tone.
 
 ---
