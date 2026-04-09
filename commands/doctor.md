@@ -7,6 +7,29 @@ description: Diagnose and fix common Sentinel installation issues — missing fi
 
 Diagnose and automatically fix common Sentinel installation issues. Report what was found and what was fixed.
 
+## Flags
+
+- `--uninstall-check` — skip the normal diagnostic flow and instead run the uninstall discovery in read-only mode. Prints a report of every Sentinel artifact found in the project (and globally, if paired with `--global`) without modifying anything. Use this to preview what `/sentinel-uninstall` would touch before running it for real.
+
+## Flag handling: `--uninstall-check`
+
+If `--uninstall-check` is passed, skip all other steps and instead run:
+
+```bash
+bash "${CLAUDE_PLUGIN_ROOT}/scripts/uninstall-helpers.sh" discover-project "$(pwd)"
+```
+
+Parse the JSON output and render it as the same human-readable report that `/sentinel-uninstall` Step 1 shows. If `--global` is also passed, also run `discover-global` and include a global section. End with:
+
+```
+This was a dry run — nothing was modified.
+
+To actually uninstall: /sentinel-uninstall
+To preview actions:     /sentinel-uninstall --dry-run
+```
+
+Do not run the rest of the doctor flow when `--uninstall-check` is set.
+
 ## Step 1: Check Vault Exists
 
 Check if `vault/` exists in the project root.

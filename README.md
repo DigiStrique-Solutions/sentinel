@@ -106,6 +106,31 @@ claude plugin update sentinel@strique-marketplace
 
 Your vault, workflows, and project configuration are preserved — only the plugin code (hooks, rules, scripts, skills) is updated.
 
+## Uninstall
+
+Sentinel mutates a lot of user and project state — vault directories, CLAUDE.md sections, `.claude/settings.json` permissions, `.gitattributes` entries, git config merge drivers, and Sentinel branches. Simply running `claude plugin uninstall` removes the plugin code but leaves all that state behind as orphaned pollution.
+
+To uninstall cleanly, run the interactive cleanup command **first**, then uninstall the plugin:
+
+```
+/sentinel-uninstall
+claude plugin uninstall sentinel@strique-marketplace
+```
+
+The cleanup command:
+- Refuses to run against a dirty git tree (commit or stash first)
+- Scans the project and prints a report of every Sentinel artifact found
+- Walks you through each category with keep / delete / revert options (vault defaults to **keep**, pollution defaults to **revert**)
+- Creates a mandatory backup tarball at `~/.sentinel/backups/` before any destructive action
+- Deletes Sentinel-created git branches (merged ones by default)
+
+Flags:
+- `--dry-run` — print every action without executing anything
+- `--all` — skip per-category prompts and apply safe defaults (keeps vault + global vault, reverts everything else)
+- `--global` — also clean up `~/.sentinel/` and global vault (with extra confirmation)
+
+To preview what will be touched without starting the uninstall flow, run `/sentinel-doctor --uninstall-check`.
+
 ## Core Concepts
 
 ### The Vault

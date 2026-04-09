@@ -85,6 +85,45 @@ This copies the file to the global vault, deletes it from the repo vault, and ha
 - **Teammates only see the repo vault.** They never see your personal global vault — it's yours. Perfect for strong opinions you don't want to push on the team.
 - **Scales to any number of repos.** Two repos or twenty, the pattern is the same.
 
+### Uninstalling Sentinel
+
+Sentinel does more than drop a plugin directory into your Claude Code install. During normal use, it writes to your project — creating `vault/` directories, appending sections to CLAUDE.md, adding permission patterns to `.claude/settings.json`, installing a vault merge driver in `.git/config` and `.gitattributes` (team preset), creating `sentinel/*` git branches on every session, writing state under `.sentinel/`, and optionally scaffolding a global vault at `~/.sentinel/vault/`. If you just run `claude plugin uninstall`, Claude Code removes the plugin files but leaves all that project-level pollution behind.
+
+The right way to remove Sentinel is a two-step process:
+
+```
+/sentinel-uninstall
+claude plugin uninstall sentinel@strique-marketplace
+```
+
+**Step 1: `/sentinel-uninstall`** — the interactive cleanup. Before it does anything, it refuses to run if your git tree is dirty (you don't want an accidental revert on top of unstaged changes). Then it scans the project and prints a report of every Sentinel artifact it found:
+
+```
+Sentinel discovery for myapp at /Users/me/myapp:
+
+  Vault:                    ./vault/       — 47 files, 312 KB
+  State directory:          ./.sentinel/    — 3 active sessions
+  CLAUDE.md sections:       4 Sentinel-added sections detected
+  Settings permissions:     76 Sentinel-added permission patterns in .claude/settings.json
+  .gitattributes:           sentinel-vault merge driver line present
+  Git config:               merge.sentinel-vault.driver set
+  Git branches:             14 sentinel/*, 2 autoresearch/*
+```
+
+It then walks you through each category and asks keep / delete / revert. The defaults are conservative: **vault defaults to keep** (it's valuable knowledge), pollution defaults to revert, ejected plugin files default to keep (once you've ejected, they're yours). Vault deletion requires you to type the repo name to confirm — no accidental wipes. Before any destructive action runs, the command tars up everything that will be touched into `~/.sentinel/backups/sentinel-backup-<repo>-<timestamp>.tar.gz` so you can recover even if you chose wrong.
+
+Useful flags:
+
+- `--dry-run` — print the full plan with no side effects. Good for understanding what will happen before you commit.
+- `--all` — skip per-category prompts and use the safe defaults automatically. Still asks for explicit confirmation on vault deletion and force-deleting unmerged branches.
+- `--global` — also clean up home-directory state: `~/.sentinel/` plugin data, `~/.claude/.sentinel-sync-version` marker, and (with an extra "type the phrase" confirmation) the global vault at `~/.sentinel/vault/`.
+
+If you just want to see what would be cleaned up without starting the uninstall flow, run `/sentinel-doctor --uninstall-check`. It's the same discovery report, no prompts.
+
+**Step 2: `claude plugin uninstall sentinel@strique-marketplace`** — after the cleanup command finishes, this removes the plugin files themselves. Claude Code handles this automatically; hooks stop firing, slash commands disappear, skills vanish.
+
+One thing the uninstaller does NOT do: it doesn't restore backups for you. The tarball is there if you need it, but rolling it back is manual (`tar -xzf <backup> -C <repo-root>`). This is deliberate — we'd rather hand you the keys than assume you want a half-automatic restore that silently undoes the uninstall.
+
 ---
 
 ## The Problems Sentinel Solves
