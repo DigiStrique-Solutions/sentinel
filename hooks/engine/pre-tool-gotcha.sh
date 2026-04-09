@@ -13,11 +13,30 @@ set -euo pipefail
 INPUT=$(cat)
 CWD=$(echo "$INPUT" | jq -r '.cwd // empty')
 
-VAULT_DIR="${CWD}/vault"
+# Resolve vault paths — search both repo and global gotchas.
+PLUGIN_ROOT="${CLAUDE_PLUGIN_ROOT:-$(cd "$(dirname "$0")/../.." && pwd)}"
+# shellcheck source=/dev/null
+source "${PLUGIN_ROOT}/scripts/resolve-vaults.sh"
+
+REPO_VAULT=$(resolve_repo_vault "$CWD")
+GLOBAL_VAULT=$(resolve_global_vault "$CWD")
+VAULT_DIRS=$(resolve_all_vaults "$CWD")
+
+# Legacy — used by the index-based fallback lookup.
+VAULT_DIR="$REPO_VAULT"
 GOTCHA_DIR="${VAULT_DIR}/gotchas"
 
-# Graceful exit if vault or gotchas directory doesn't exist
-if [ ! -d "$GOTCHA_DIR" ]; then
+# Graceful exit if no vault with gotchas exists
+HAS_GOTCHAS=false
+while IFS= read -r VD; do
+    [ -z "$VD" ] && continue
+    if [ -d "${VD}/gotchas" ]; then
+        HAS_GOTCHAS=true
+        break
+    fi
+done <<< "$VAULT_DIRS"
+
+if [ "$HAS_GOTCHAS" = "false" ]; then
     exit 0
 fi
 
@@ -33,31 +52,39 @@ PARENT_DIR=$(basename "$(dirname "$FILE_PATH")")
 # Also compute a relative path from project root for broader matching
 REL_PATH=$(echo "$FILE_PATH" | sed "s|${CWD}/||" 2>/dev/null || echo "$FILE_PATH")
 
-# Search gotcha files for mentions of this file or its directory
+# Search gotcha files for mentions of this file or its directory.
+# Walks both repo and global gotcha directories.
 MATCHES=""
 MATCH_COUNT=0
 
-for f in "${GOTCHA_DIR}"/*.md; do
-    [ -f "$f" ] || continue
+SAFE_BASENAME=$(printf '%s' "$BASENAME" | sed 's/[.[\*^$()+?{|]/\\&/g')
+SAFE_PARENT=$(printf '%s' "$PARENT_DIR" | sed 's/[.[\*^$()+?{|]/\\&/g')
+SAFE_REL=$(printf '%s' "$REL_PATH" | sed 's/[.[\*^$()+?{|]/\\&/g')
+
+while IFS= read -r VD; do
+    [ -z "$VD" ] && continue
+    [ ! -d "${VD}/gotchas" ] && continue
     [ "$MATCH_COUNT" -ge 3 ] && break
 
-    GOTCHA_NAME=$(basename "$f" .md)
-
-    # Search gotcha content for:
-    # 1. The exact filename
-    # 2. The parent directory name
-    # 3. The relative path (or parts of it)
-    # Escape regex metacharacters in filenames (dots, brackets, etc.)
-    SAFE_BASENAME=$(printf '%s' "$BASENAME" | sed 's/[.[\*^$()+?{|]/\\&/g')
-    SAFE_PARENT=$(printf '%s' "$PARENT_DIR" | sed 's/[.[\*^$()+?{|]/\\&/g')
-    SAFE_REL=$(printf '%s' "$REL_PATH" | sed 's/[.[\*^$()+?{|]/\\&/g')
-    if grep -qiE "(${SAFE_BASENAME}|${SAFE_PARENT}/|${SAFE_REL})" "$f" 2>/dev/null; then
-        # Extract first heading as a summary
-        HEADING=$(grep -m1 '^#' "$f" 2>/dev/null | sed 's/^#* *//' || echo "$GOTCHA_NAME")
-        MATCHES="${MATCHES}\n- **${GOTCHA_NAME}**: ${HEADING} (read vault/gotchas/${GOTCHA_NAME}.md)"
-        MATCH_COUNT=$((MATCH_COUNT + 1))
+    LABEL=""
+    HINT="${VD}/gotchas"
+    if [ "$VD" = "$GLOBAL_VAULT" ]; then
+        LABEL=" [global]"
     fi
-done
+
+    for f in "${VD}/gotchas"/*.md; do
+        [ -f "$f" ] || continue
+        [ "$MATCH_COUNT" -ge 3 ] && break
+
+        GOTCHA_NAME=$(basename "$f" .md)
+
+        if grep -qiE "(${SAFE_BASENAME}|${SAFE_PARENT}/|${SAFE_REL})" "$f" 2>/dev/null; then
+            HEADING=$(grep -m1 '^#' "$f" 2>/dev/null | sed 's/^#* *//' || echo "$GOTCHA_NAME")
+            MATCHES="${MATCHES}\n- **${GOTCHA_NAME}**${LABEL}: ${HEADING} (read ${HINT}/${GOTCHA_NAME}.md)"
+            MATCH_COUNT=$((MATCH_COUNT + 1))
+        fi
+    done
+done <<< "$VAULT_DIRS"
 
 # Also try index-based lookup if index exists (faster for large vaults)
 INDEX_FILE="${VAULT_DIR}/.index.json"

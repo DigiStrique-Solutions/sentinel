@@ -7,6 +7,45 @@ description: Scaffold the Sentinel vault, workflows, and quality gates for a new
 
 You are scaffolding a new Sentinel vault for this project. Follow these steps exactly.
 
+## Step 0: Pre-flight — Confirm the working directory
+
+People often install Sentinel from a terminal and run `/sentinel-bootstrap` from whatever directory they happened to be in — not always a project root, and not always a git repo. Before touching anything, confirm.
+
+1. Print the current working directory:
+   ```
+   Bootstrap will run in: <cwd>
+   ```
+
+2. Check if the cwd is inside a git repository (`git -C <cwd> rev-parse --is-inside-work-tree`).
+
+   - **If NOT a git repo**, warn the user:
+     ```
+     WARNING: <cwd> is not a git repository.
+
+     The vault will not be version-controlled here. If this isn't your project
+     root, you should cd into the correct repo first.
+
+     Continue anyway? (y/N)
+     ```
+     If the user declines, stop.
+
+   - **If it IS a git repo but the cwd is NOT the repo root**, warn:
+     ```
+     NOTE: You're in a subdirectory of a git repo.
+       cwd:       <cwd>
+       repo root: <repo-root>
+
+     The vault will be created at <cwd>/vault/, not at the repo root.
+     Is this what you want? (y/N)
+     ```
+     If the user declines, stop.
+
+3. Confirm the final vault path before doing anything:
+   ```
+   The vault will be created at: <cwd>/vault/
+   Proceed? (y/N)
+   ```
+
 ## Step 1: Check for Existing Vault
 
 Check if a `vault/` directory already exists in the project root.
@@ -162,6 +201,31 @@ Configured N tool permissions in .claude/settings.json
 Claude will now execute tests, lints, builds, and git commands autonomously — no permission prompts.
 ```
 
+## Step 8c: Offer Global Vault Setup
+
+Sentinel supports a **global vault** at `~/.sentinel/vault/` for personal cross-repo knowledge — gotchas, investigations, and patterns that apply across every project you work on. This is separate from the repo vault just created.
+
+Check if `~/.sentinel/vault/` already exists.
+
+**If it exists**, just tell the user:
+```
+Global vault detected at ~/.sentinel/vault/ — it will be loaded alongside this repo's vault in every session.
+```
+
+**If it doesn't exist**, ask:
+```
+Sentinel supports a personal global vault for knowledge that applies across
+all your projects (cross-repo gotchas, tooling quirks, personal conventions).
+This is optional and fully separate from this repo's vault.
+
+Set up a global vault now? (y/N)
+```
+
+If the user says yes, run `/sentinel-global-init` and follow its flow. If they say no, tell them:
+```
+Skipped. You can set it up any time with /sentinel-global-init.
+```
+
 ## Step 9: Print Summary
 
 Print a summary of what was created:
@@ -171,6 +235,7 @@ Print a summary of what was created:
 - Whether CLAUDE.md was created or updated
 - Stack configuration applied
 - Number of tool permissions configured
+- Global vault status (exists / newly created / skipped)
 
 ## Step 10: Suggest Next Steps
 

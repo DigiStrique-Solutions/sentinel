@@ -13,6 +13,11 @@ Read `.sentinel/config.json` if it exists. If not, use defaults:
 
 ```json
 {
+  "vault": {
+    "repo_path": "vault",
+    "global_enabled": true,
+    "global_path": "~/.sentinel/vault"
+  },
   "hooks": {
     "git_autopilot": true,
     "pattern_extraction": false,
@@ -36,6 +41,11 @@ Display the current configuration:
 ```
 Sentinel Configuration
 
+Vault:
+  Repo vault path:                        ./vault/
+  Global vault enabled:                   ON
+  Global vault path:                      ~/.sentinel/vault/
+
 Core Hooks:
   Git Autopilot (auto-branch + auto-commit):  ON
 
@@ -52,7 +62,19 @@ Thresholds:
   Investigation warning (days open):       7
 ```
 
-## Step 3: Configure Hooks
+## Step 3a: Configure Vault
+
+Ask if the user wants to change vault settings.
+
+1. **Global vault enabled** — When ON (default), the personal global vault at `~/.sentinel/vault/` is loaded in every session alongside the repo vault. Entries from the global vault are tagged `[global]` in session output so you can tell them apart. Turn OFF if you don't want cross-repo knowledge loaded into this specific project.
+
+2. **Global vault path** — Where the global vault lives. Default: `~/.sentinel/vault/`. Change this if you keep your personal vault somewhere else (e.g., inside a Dropbox/iCloud folder, or a dedicated git repo elsewhere).
+
+3. **Repo vault path** — Where this repo's vault lives. Default: `vault` (relative to the repo root). You usually don't need to change this.
+
+If the user updates any of these, save them to `.sentinel/config.json` under the `vault` key.
+
+## Step 3b: Configure Hooks
 
 Ask the user which hooks to toggle. Present each hook with its current state and a description:
 

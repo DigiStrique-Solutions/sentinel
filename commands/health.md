@@ -14,15 +14,31 @@ Use these indicators:
 
 ## 1. Vault Health
 
+Sentinel supports two vaults: the **repo vault** (`./vault/`) and an optional **global vault** (`~/.sentinel/vault/`). Report on both.
+
+### Repo vault
+
 Check the `vault/` directory in the project root.
 
-- Does `vault/` exist? If not, report `[FAIL] Vault not found. Run /bootstrap to create it.` and stop.
+- Does `vault/` exist? If not, report `[FAIL] Repo vault not found. Run /sentinel-bootstrap to create it.` and continue to the global vault check (don't stop — global vault may still exist).
 - List directories present vs expected: investigations, gotchas, decisions, workflows, quality, patterns, architecture, changelog, context, completed, planning
 - Count files in each directory (exclude _template.md and _example.md from counts)
-- Report as a table:
+
+### Global vault
+
+Check `~/.sentinel/vault/` (or the path configured in `.sentinel/config.json` under `vault.global_path`).
+
+- Does it exist? If not, report `[INFO] Global vault not configured. Run /sentinel-global-init to set one up.` (this is informational, not a failure — the global vault is optional)
+- If `vault.global_enabled` is `false` in config, report `[INFO] Global vault disabled for this project`
+- If it exists and is enabled, count files in investigations, gotchas, decisions, patterns/learned
+- Report whether it's a git repo and whether it has a remote configured
+
+Report both as a table:
 
 ```
 Vault Health
+
+Repo vault (./vault/)
 Directory          Files  Status
 investigations/    3      [PASS]
   resolved/        1      [PASS]
@@ -33,6 +49,14 @@ quality/           3      [PASS]
 patterns/          0      [WARN] No patterns extracted yet
 architecture/      0      [WARN] No architecture docs
 changelog/         0      [WARN] No changelog entries
+
+Global vault (~/.sentinel/vault/)
+Status: enabled, git-tracked, remote configured
+Directory          Files  Status
+investigations/    1      [PASS]
+gotchas/           8      [PASS]
+decisions/         0      [INFO]
+patterns/learned/  2      [PASS]
 ```
 
 ## 2. Open Investigations

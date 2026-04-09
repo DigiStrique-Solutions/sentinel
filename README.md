@@ -71,6 +71,31 @@ This scaffolds a `vault/` directory, quality gates, and workflows tailored to yo
 | **standard** | Full vault + 13 workflows + quality gates + CLAUDE.md | Solo developers |
 | **team** | Standard + shared sync + team onboarding | Teams |
 
+## Working Across Multiple Repos
+
+If you work across multiple repos (e.g., separate frontend and backend), Sentinel uses a two-layer vault system:
+
+1. **Repo vault** (`./vault/`) — per-repo, committed with the code, gets pulled by your teammates. Default behavior.
+2. **Global vault** (`~/.sentinel/vault/`) — personal, cross-repo, optional. Lives in your home directory. Holds knowledge that applies everywhere: OS quirks, tooling gotchas, personal conventions. Never shared with teammates.
+
+Both vaults are loaded at every session start. Entries from the global vault are tagged `[global]` in the session output so you know where they came from.
+
+Set up the global vault once:
+
+```
+/sentinel-global-init
+```
+
+This scaffolds `~/.sentinel/vault/` and optionally turns it into a git repo (with a remote) so you can sync it across machines.
+
+Move a file from the repo vault to the global vault when it becomes cross-cutting:
+
+```
+/sentinel-promote gotchas/macos-sed-inplace.md
+```
+
+This handles the copy, the delete, and the git operations on both sides.
+
 ## Update
 
 To update Sentinel to the latest version:

@@ -4,6 +4,20 @@ All notable changes to Sentinel will be documented in this file.
 
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.16.0] - 2026-04-09
+
+### Added
+
+- **Global vault for cross-repo knowledge** — Sentinel now supports a personal global vault at `~/.sentinel/vault/` that loads alongside the repo vault in every session. Solves the multi-repo problem: when working across separate frontend/backend repos, knowledge that applies to both (OS quirks, tooling gotchas, personal conventions) lives in one place instead of being duplicated or lost. Read-path hooks (`session-start-loader`, `pre-tool-gotcha`, `prompt-vault-search`, `session-start-compact-reload`) load from both vaults; entries from the global vault are tagged `[global]` in session output. Write-path hooks (stop-enforcer, activity logger, session recovery) still write only to the repo vault — users explicitly promote files via `/sentinel-promote` when they become cross-cutting. New commands:
+  - `/sentinel-global-init` — scaffolds `~/.sentinel/vault/`, optionally `git init`s it and adds a remote for cross-machine sync
+  - `/sentinel-promote <file>` — moves a file from repo vault to global vault with git handling on both sides
+  - `/sentinel-config` now exposes `vault.repo_path`, `vault.global_enabled`, `vault.global_path`
+  - `/sentinel-health` reports both vaults
+  - `/sentinel-bootstrap` now offers to set up the global vault if it doesn't exist
+  - Shared helper `scripts/resolve-vaults.sh` provides `resolve_repo_vault`, `resolve_global_vault`, `resolve_all_vaults` functions sourced by all read-path hooks
+
+- **Bootstrap pre-flight checks for terminal installs** — `/sentinel-bootstrap` now verifies the working directory before creating anything. Warns if the cwd is not a git repo, warns if the cwd is a subdirectory of a git repo (vault would end up in the wrong place), and confirms the final vault path with the user before proceeding. Fixes the common failure mode where users install via `claude plugin install` from their home directory, run bootstrap, and create a vault in the wrong location.
+
 ## [0.15.0] - 2026-04-09
 
 ### Added

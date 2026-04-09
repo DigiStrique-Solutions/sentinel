@@ -28,8 +28,18 @@ if [ "$SOURCE" != "compact" ]; then
     exit 0
 fi
 
-VAULT_DIR="${CWD}/vault"
-if [ ! -d "$VAULT_DIR" ]; then
+# Resolve vault paths. Session recovery only lives in the repo vault,
+# but open investigations are loaded from both.
+PLUGIN_ROOT="${CLAUDE_PLUGIN_ROOT:-$(cd "$(dirname "$0")/../.." && pwd)}"
+# shellcheck source=/dev/null
+source "${PLUGIN_ROOT}/scripts/resolve-vaults.sh"
+
+REPO_VAULT=$(resolve_repo_vault "$CWD")
+GLOBAL_VAULT=$(resolve_global_vault "$CWD")
+VAULT_DIRS=$(resolve_all_vaults "$CWD")
+VAULT_DIR="$REPO_VAULT"
+
+if [ -z "$VAULT_DIRS" ]; then
     exit 0
 fi
 
@@ -60,20 +70,29 @@ if [ -n "$SESSION_ID" ]; then
     fi
 fi
 
-# --- 3. Reload open investigations (highest priority vault content) ---
-if [ -d "${VAULT_DIR}/investigations" ]; then
-    OPEN_INVESTIGATIONS=""
-    for f in "${VAULT_DIR}/investigations"/*.md; do
+# --- 3. Reload open investigations (from both repo and global vaults) ---
+OPEN_INVESTIGATIONS=""
+while IFS= read -r VD; do
+    [ -z "$VD" ] && continue
+    [ ! -d "${VD}/investigations" ] && continue
+
+    LABEL=""
+    if [ "$VD" = "$GLOBAL_VAULT" ]; then
+        LABEL=" [global]"
+    fi
+
+    for f in "${VD}/investigations"/*.md; do
         [ -f "$f" ] || continue
         [ "$(basename "$f")" = "_template.md" ] && continue
         if ! grep -qi "status:.*\(resolved\|implemented\|obsolete\)" "$f" 2>/dev/null; then
             FILENAME=$(basename "$f")
-            OPEN_INVESTIGATIONS="${OPEN_INVESTIGATIONS}\n- **${FILENAME}**"
+            OPEN_INVESTIGATIONS="${OPEN_INVESTIGATIONS}\n- **${FILENAME}**${LABEL}"
         fi
     done
-    if [ -n "$OPEN_INVESTIGATIONS" ]; then
-        OUTPUT="${OUTPUT}\n\n## OPEN INVESTIGATIONS (still active)\n${OPEN_INVESTIGATIONS}\nCheck these before attempting fixes — they document approaches that already failed."
-    fi
+done <<< "$VAULT_DIRS"
+
+if [ -n "$OPEN_INVESTIGATIONS" ]; then
+    OUTPUT="${OUTPUT}\n\n## OPEN INVESTIGATIONS (still active)\n${OPEN_INVESTIGATIONS}\nCheck these before attempting fixes — they document approaches that already failed."
 fi
 
 # --- 4. Reload bugfix mode flag ---

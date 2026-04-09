@@ -13,7 +13,12 @@ set -euo pipefail
 INPUT=$(cat)
 CWD=$(echo "$INPUT" | jq -r '.cwd // empty')
 
-VAULT_DIR="${CWD}/vault"
+# Resolve the repo vault only — index lives with each vault independently.
+PLUGIN_ROOT="${CLAUDE_PLUGIN_ROOT:-$(cd "$(dirname "$0")/../.." && pwd)}"
+# shellcheck source=/dev/null
+source "${PLUGIN_ROOT}/scripts/resolve-vaults.sh"
+
+VAULT_DIR=$(resolve_repo_vault "$CWD")
 INDEX_FILE="${VAULT_DIR}/.index.json"
 STALE_MARKER="${VAULT_DIR}/.index-stale"
 INDEX_SCRIPT="${CWD}/scripts/build-index.sh"

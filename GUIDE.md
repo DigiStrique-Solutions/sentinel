@@ -50,6 +50,41 @@ claude plugin update sentinel@strique-marketplace
 
 Your vault, workflows, and project configuration are preserved — only the plugin code (hooks, rules, scripts, skills) is updated.
 
+### Working across multiple repos
+
+Most developers don't work in just one repo. You might have a frontend repo, a backend repo, and a handful of microservices — each on GitHub, each with its own team and its own conventions. Sentinel handles this with a two-layer vault system:
+
+1. **Repo vault** (`./vault/`) — per-repo, committed with the code, visible to your teammates. This is what `/sentinel-bootstrap` creates. Project-specific gotchas, investigations, and decisions live here.
+
+2. **Global vault** (`~/.sentinel/vault/`) — personal, cross-repo, optional. Lives in your home directory. Holds knowledge that applies across every project you work on: OS quirks, tooling gotchas, personal conventions, things you've learned about tools that aren't tied to any specific codebase. Never shared with teammates.
+
+Both vaults are loaded into every session. Entries from the global vault are tagged `[global]` in the session output so you can tell them apart from repo-specific knowledge.
+
+**Set up the global vault once:**
+
+```
+/sentinel-global-init
+```
+
+This scaffolds `~/.sentinel/vault/` with the standard directory structure. It will ask if you want to turn the vault into its own git repo (with an optional remote) so you can sync it across your machines.
+
+**When you write something that belongs in the global vault:**
+
+Start by writing it to the repo vault as usual. If you realize it's cross-cutting, promote it:
+
+```
+/sentinel-promote gotchas/macos-sed-inplace.md
+```
+
+This copies the file to the global vault, deletes it from the repo vault, and handles the git operations on both sides. The file will now load in every session across all your projects.
+
+**Why this design:**
+
+- **Writes go to the repo vault by default.** You never have to think about "which vault does this belong in" while working. Everything starts local. Promotion is explicit and happens when the knowledge proves cross-cutting.
+- **Reads load from both.** The agent sees everything you know, regardless of which repo you're in.
+- **Teammates only see the repo vault.** They never see your personal global vault — it's yours. Perfect for strong opinions you don't want to push on the team.
+- **Scales to any number of repos.** Two repos or twenty, the pattern is the same.
+
 ---
 
 ## The Problems Sentinel Solves

@@ -16,7 +16,15 @@ INPUT=$(cat)
 PROMPT=$(echo "$INPUT" | jq -r '.prompt // empty')
 CWD=$(echo "$INPUT" | jq -r '.cwd // empty')
 
-VAULT_DIR="${CWD}/vault"
+# Resolve vault paths — search both repo and global vaults.
+PLUGIN_ROOT="${CLAUDE_PLUGIN_ROOT:-$(cd "$(dirname "$0")/../.." && pwd)}"
+# shellcheck source=/dev/null
+source "${PLUGIN_ROOT}/scripts/resolve-vaults.sh"
+
+REPO_VAULT=$(resolve_repo_vault "$CWD")
+GLOBAL_VAULT=$(resolve_global_vault "$CWD")
+VAULT_DIRS=$(resolve_all_vaults "$CWD")
+VAULT_DIR="$REPO_VAULT"  # kept for index lookup fallback
 
 # Check if this optional hook is enabled via config
 CONFIG_FILE="${CWD}/.sentinel/config.json"
@@ -27,8 +35,8 @@ else
 fi
 [ "$ENABLED" != "true" ] && exit 0
 
-# Graceful exit if vault doesn't exist
-if [ ! -d "$VAULT_DIR" ]; then
+# Graceful exit if no vault exists at all
+if [ -z "$VAULT_DIRS" ]; then
     exit 0
 fi
 
@@ -77,26 +85,36 @@ if [ -f "$INDEX_FILE" ]; then
         done
     done
 else
-    # Fallback: brute-force grep search across vault directories
-    for dir in investigations gotchas decisions; do
+    # Fallback: brute-force grep search across both vaults
+    while IFS= read -r VD; do
+        [ -z "$VD" ] && continue
         [ "$MATCH_COUNT" -ge 5 ] && break
-        [ -d "${VAULT_DIR}/${dir}" ] || continue
 
-        for f in "${VAULT_DIR}/${dir}"/*.md; do
-            [ -f "$f" ] || continue
+        LABEL=""
+        if [ "$VD" = "$GLOBAL_VAULT" ]; then
+            LABEL=" [global]"
+        fi
+
+        for dir in investigations gotchas decisions; do
             [ "$MATCH_COUNT" -ge 5 ] && break
-            [ "$(basename "$f")" = "_template.md" ] && continue
+            [ -d "${VD}/${dir}" ] || continue
 
-            FILENAME=$(basename "$f")
-            for kw in $KEYWORDS; do
-                if grep -qil "$kw" "$f" 2>/dev/null; then
-                    MATCHES="${MATCHES}\n- vault/${dir}/${FILENAME}"
-                    MATCH_COUNT=$((MATCH_COUNT + 1))
-                    break
-                fi
+            for f in "${VD}/${dir}"/*.md; do
+                [ -f "$f" ] || continue
+                [ "$MATCH_COUNT" -ge 5 ] && break
+                [ "$(basename "$f")" = "_template.md" ] && continue
+
+                FILENAME=$(basename "$f")
+                for kw in $KEYWORDS; do
+                    if grep -qil "$kw" "$f" 2>/dev/null; then
+                        MATCHES="${MATCHES}\n- ${VD}/${dir}/${FILENAME}${LABEL}"
+                        MATCH_COUNT=$((MATCH_COUNT + 1))
+                        break
+                    fi
+                done
             done
         done
-    done
+    done <<< "$VAULT_DIRS"
 fi
 
 # Output matched entries as additional context

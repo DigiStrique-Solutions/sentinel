@@ -22,11 +22,24 @@ set -euo pipefail
 INPUT=$(cat)
 CWD=$(echo "$INPUT" | jq -r '.cwd // empty')
 
-# Resolve vault directory relative to project root
-VAULT_DIR="${CWD}/vault"
+# Resolve vault paths via shared helper.
+# REPO_VAULT is the per-repo vault (default ./vault/).
+# GLOBAL_VAULT is the personal cross-repo vault (~/.sentinel/vault/).
+# VAULT_DIRS is a newline-separated list of existing vaults to read from.
+PLUGIN_ROOT="${CLAUDE_PLUGIN_ROOT:-$(cd "$(dirname "$0")/../.." && pwd)}"
+# shellcheck source=/dev/null
+source "${PLUGIN_ROOT}/scripts/resolve-vaults.sh"
 
-# Graceful exit if vault doesn't exist — project hasn't adopted vault yet
-if [ ! -d "$VAULT_DIR" ]; then
+REPO_VAULT=$(resolve_repo_vault "$CWD")
+GLOBAL_VAULT=$(resolve_global_vault "$CWD")
+VAULT_DIRS=$(resolve_all_vaults "$CWD")
+
+# Legacy name — kept because the rest of this script uses VAULT_DIR for
+# summary counts and the team onboarding check. Points at the repo vault.
+VAULT_DIR="$REPO_VAULT"
+
+# Graceful exit if no vault exists at all (neither repo nor global)
+if [ -z "$VAULT_DIRS" ]; then
     exit 0
 fi
 
@@ -77,57 +90,74 @@ fi
 
 # --- PRIORITY 1: Load open investigations (most critical) ---
 # These prevent the agent from repeating approaches that already failed.
-if [ -d "${VAULT_DIR}/investigations" ]; then
-    OPEN_INVESTIGATIONS=""
-    for f in "${VAULT_DIR}/investigations"/*.md; do
+# Loaded from BOTH repo vault and global vault.
+OPEN_INVESTIGATIONS=""
+RESOLVED_COUNT=0
+while IFS= read -r VD; do
+    [ -z "$VD" ] && continue
+    [ ! -d "${VD}/investigations" ] && continue
+
+    # Label global entries so the agent knows where they came from
+    LABEL=""
+    if [ "$VD" = "$GLOBAL_VAULT" ]; then
+        LABEL=" [global]"
+    fi
+
+    for f in "${VD}/investigations"/*.md; do
         [ -f "$f" ] || continue
         [ "$(basename "$f")" = "_template.md" ] && continue
 
         # Skip resolved/implemented/obsolete investigations
         if ! grep -qi "status:.*\(resolved\|implemented\|obsolete\)" "$f" 2>/dev/null; then
             FILENAME=$(basename "$f")
-            # Extract first 3 lines after frontmatter for a brief summary
             SUMMARY=$(awk '/^---$/{n++; next} n==1{if(NR<=6) print}' "$f" | head -3)
-            OPEN_INVESTIGATIONS="${OPEN_INVESTIGATIONS}\n- **${FILENAME}**: ${SUMMARY}"
+            OPEN_INVESTIGATIONS="${OPEN_INVESTIGATIONS}\n- **${FILENAME}**${LABEL}: ${SUMMARY}"
         fi
     done
 
-    if [ -n "$OPEN_INVESTIGATIONS" ]; then
-        SECTION="\n\n## OPEN INVESTIGATIONS (check before attempting fixes)\n${OPEN_INVESTIGATIONS}"
-        add_to_context "$SECTION" || true  # Always try — highest priority
+    if [ -d "${VD}/investigations/resolved" ]; then
+        RC=$(find "${VD}/investigations/resolved" -name "*.md" -type f 2>/dev/null | wc -l | tr -d ' ')
+        RESOLVED_COUNT=$(( RESOLVED_COUNT + RC ))
+    fi
+done <<< "$VAULT_DIRS"
 
-        # Track loaded investigations for /sentinel-stats
-        SENTINEL_STATS_DIR="${CWD}/.sentinel"
-        mkdir -p "$SENTINEL_STATS_DIR" 2>/dev/null || true
-        echo -e "$OPEN_INVESTIGATIONS" | grep -oE '\*\*[^*]+\*\*' | sed 's/\*\*//g' > "${SENTINEL_STATS_DIR}/investigations-loaded.txt" 2>/dev/null || true
-    fi
+if [ -n "$OPEN_INVESTIGATIONS" ]; then
+    SECTION="\n\n## OPEN INVESTIGATIONS (check before attempting fixes)\n${OPEN_INVESTIGATIONS}"
+    add_to_context "$SECTION" || true  # Always try — highest priority
 
-    # Count resolved investigations without loading them
-    RESOLVED_COUNT=0
-    if [ -d "${VAULT_DIR}/investigations/resolved" ]; then
-        RESOLVED_COUNT=$(find "${VAULT_DIR}/investigations/resolved" -name "*.md" -type f 2>/dev/null | wc -l | tr -d ' ')
-    fi
-    if [ "$RESOLVED_COUNT" -gt 0 ]; then
-        add_to_context "\n\n> **${RESOLVED_COUNT} resolved investigations** available in \`vault/investigations/resolved/\` — consult these if you encounter a similar problem area. Do NOT read them all; look up specific ones by keyword when relevant." || true
-    fi
+    # Track loaded investigations for /sentinel-stats
+    SENTINEL_STATS_DIR="${CWD}/.sentinel"
+    mkdir -p "$SENTINEL_STATS_DIR" 2>/dev/null || true
+    echo -e "$OPEN_INVESTIGATIONS" | grep -oE '\*\*[^*]+\*\*' | sed 's/\*\*//g' > "${SENTINEL_STATS_DIR}/investigations-loaded.txt" 2>/dev/null || true
+fi
+
+if [ "$RESOLVED_COUNT" -gt 0 ]; then
+    add_to_context "\n\n> **${RESOLVED_COUNT} resolved investigations** available in \`vault/investigations/resolved/\` — consult these if you encounter a similar problem area. Do NOT read them all; look up specific ones by keyword when relevant." || true
 fi
 
 # --- PRIORITY 2: Load gotchas (relevance-filtered) ---
 # First load gotchas relevant to recently changed code, then others if budget allows.
-if [ -d "${VAULT_DIR}/gotchas" ]; then
-    RELEVANT_GOTCHAS=""
-    OTHER_GOTCHAS=""
+# Loaded from BOTH repo vault and global vault.
+RELEVANT_GOTCHAS=""
+OTHER_GOTCHAS=""
+while IFS= read -r VD; do
+    [ -z "$VD" ] && continue
+    [ ! -d "${VD}/gotchas" ] && continue
 
-    for f in "${VAULT_DIR}/gotchas"/*.md; do
+    LABEL=""
+    if [ "$VD" = "$GLOBAL_VAULT" ]; then
+        LABEL=" [global]"
+    fi
+
+    for f in "${VD}/gotchas"/*.md; do
         [ -f "$f" ] || continue
         FILENAME=$(basename "$f" .md)
         DESC=$(grep -m1 '^#' "$f" 2>/dev/null | sed 's/^#* *//' || echo "")
-        ENTRY="- **${FILENAME}**: ${DESC}"
+        ENTRY="- **${FILENAME}**${LABEL}: ${DESC}"
 
         # Check if this gotcha is relevant to recently changed areas
         IS_RELEVANT=false
         if [ -n "$CHANGED_DIRS" ]; then
-            # Check if the gotcha file mentions any of the changed directories
             for dir in $CHANGED_DIRS; do
                 if grep -qi "$(basename "$dir")" "$f" 2>/dev/null; then
                     IS_RELEVANT=true
@@ -142,27 +172,24 @@ if [ -d "${VAULT_DIR}/gotchas" ]; then
             OTHER_GOTCHAS="${OTHER_GOTCHAS}\n${ENTRY}"
         fi
     done
+done <<< "$VAULT_DIRS"
 
-    GOTCHA_SECTION=""
-    if [ -n "$RELEVANT_GOTCHAS" ] || [ -n "$OTHER_GOTCHAS" ]; then
-        GOTCHA_SECTION="\n\n## KNOWN GOTCHAS (pitfalls to avoid)"
-        if [ -n "$RELEVANT_GOTCHAS" ]; then
-            GOTCHA_SECTION="${GOTCHA_SECTION}\n${RELEVANT_GOTCHAS}"
-        fi
-        if [ -n "$OTHER_GOTCHAS" ]; then
-            # Add remaining gotchas only if budget allows
-            COMBINED="${GOTCHA_SECTION}\n${OTHER_GOTCHAS}"
-            if budget_allows "$COMBINED"; then
-                GOTCHA_SECTION="$COMBINED"
-            elif [ -z "$RELEVANT_GOTCHAS" ]; then
-                # No relevant ones and full list doesn't fit — show count only
-                OTHER_COUNT=$(echo -e "$OTHER_GOTCHAS" | grep -c '^\-' || echo "0")
-                GOTCHA_SECTION="${GOTCHA_SECTION}\n> ${OTHER_COUNT} gotchas available in \`vault/gotchas/\` — consult when working in unfamiliar areas."
-            fi
-            # If relevant ones loaded but others don't fit, just skip others
-        fi
-        add_to_context "$GOTCHA_SECTION" || true
+GOTCHA_SECTION=""
+if [ -n "$RELEVANT_GOTCHAS" ] || [ -n "$OTHER_GOTCHAS" ]; then
+    GOTCHA_SECTION="\n\n## KNOWN GOTCHAS (pitfalls to avoid)"
+    if [ -n "$RELEVANT_GOTCHAS" ]; then
+        GOTCHA_SECTION="${GOTCHA_SECTION}\n${RELEVANT_GOTCHAS}"
     fi
+    if [ -n "$OTHER_GOTCHAS" ]; then
+        COMBINED="${GOTCHA_SECTION}\n${OTHER_GOTCHAS}"
+        if budget_allows "$COMBINED"; then
+            GOTCHA_SECTION="$COMBINED"
+        elif [ -z "$RELEVANT_GOTCHAS" ]; then
+            OTHER_COUNT=$(echo -e "$OTHER_GOTCHAS" | grep -c '^\-' || echo "0")
+            GOTCHA_SECTION="${GOTCHA_SECTION}\n> ${OTHER_COUNT} gotchas available — consult when working in unfamiliar areas."
+        fi
+    fi
+    add_to_context "$GOTCHA_SECTION" || true
 fi
 
 # --- PRIORITY 3: Load session recovery (if recent) ---
@@ -184,22 +211,30 @@ if [ -d "${VAULT_DIR}/session-recovery" ]; then
 fi
 
 # --- PRIORITY 4: Load high-confidence learned patterns ---
-if [ -d "${VAULT_DIR}/patterns/learned" ]; then
-    HIGH_CONF_PATTERNS=""
-    for f in "${VAULT_DIR}/patterns/learned/"*.md; do
+# Loaded from BOTH repo vault and global vault.
+HIGH_CONF_PATTERNS=""
+while IFS= read -r VD; do
+    [ -z "$VD" ] && continue
+    [ ! -d "${VD}/patterns/learned" ] && continue
+
+    LABEL=""
+    if [ "$VD" = "$GLOBAL_VAULT" ]; then
+        LABEL=" [global]"
+    fi
+
+    for f in "${VD}/patterns/learned/"*.md; do
         [ -f "$f" ] || continue
         CONF=$(grep "^confidence:" "$f" 2>/dev/null | head -1 | awk '{print $2}')
-        # Guard: skip if CONF is empty or non-numeric (awk would get a syntax error)
         if [ -n "$CONF" ] && echo "$CONF" | grep -qE '^[0-9]+\.?[0-9]*$' && awk "BEGIN {if ($CONF >= 0.7) exit 0; else exit 1}" 2>/dev/null; then
             NAME=$(basename "$f" .md)
             TITLE=$(grep -m1 '^# ' "$f" 2>/dev/null | sed 's/^# //')
-            HIGH_CONF_PATTERNS="${HIGH_CONF_PATTERNS}\n- **${NAME}**: ${TITLE} (confidence: ${CONF})"
+            HIGH_CONF_PATTERNS="${HIGH_CONF_PATTERNS}\n- **${NAME}**${LABEL}: ${TITLE} (confidence: ${CONF})"
         fi
     done
+done <<< "$VAULT_DIRS"
 
-    if [ -n "$HIGH_CONF_PATTERNS" ]; then
-        add_to_context "\n\n## LEARNED PATTERNS (high confidence)\n${HIGH_CONF_PATTERNS}" || true
-    fi
+if [ -n "$HIGH_CONF_PATTERNS" ]; then
+    add_to_context "\n\n## LEARNED PATTERNS (high confidence)\n${HIGH_CONF_PATTERNS}" || true
 fi
 
 # --- PRIORITY 5: Load recent team activity (lowest priority) ---
@@ -254,15 +289,20 @@ if [ -x "$FACTS_SCRIPT" ]; then
     fi
 fi
 
-# --- Summary counts ---
+# --- Summary counts (across all vaults) ---
 INVESTIGATION_COUNT=0
 GOTCHA_COUNT=0
-if [ -d "${VAULT_DIR}/investigations" ]; then
-    INVESTIGATION_COUNT=$(find "${VAULT_DIR}/investigations" -maxdepth 1 -name "*.md" ! -name "_template.md" -type f 2>/dev/null | wc -l | tr -d ' ')
-fi
-if [ -d "${VAULT_DIR}/gotchas" ]; then
-    GOTCHA_COUNT=$(find "${VAULT_DIR}/gotchas" -name "*.md" -type f 2>/dev/null | wc -l | tr -d ' ')
-fi
+while IFS= read -r VD; do
+    [ -z "$VD" ] && continue
+    if [ -d "${VD}/investigations" ]; then
+        IC=$(find "${VD}/investigations" -maxdepth 1 -name "*.md" ! -name "_template.md" -type f 2>/dev/null | wc -l | tr -d ' ')
+        INVESTIGATION_COUNT=$(( INVESTIGATION_COUNT + IC ))
+    fi
+    if [ -d "${VD}/gotchas" ]; then
+        GC=$(find "${VD}/gotchas" -name "*.md" -type f 2>/dev/null | wc -l | tr -d ' ')
+        GOTCHA_COUNT=$(( GOTCHA_COUNT + GC ))
+    fi
+done <<< "$VAULT_DIRS"
 
 # --- Budget reporting ---
 TOKENS_USED=$(( CHARS_USED * 10 / 35 ))
@@ -273,7 +313,11 @@ fi
 
 # --- Output context for injection into the session ---
 if [ -n "$CONTEXT" ]; then
-    echo -e "VAULT CONTEXT LOADED (${INVESTIGATION_COUNT} investigations, ${GOTCHA_COUNT} gotchas, ~${TOKENS_USED} tokens):${CONTEXT}\n\nBefore attempting any fix, CHECK vault/investigations/ for past failed approaches. Before writing code, CHECK vault/gotchas/ for known pitfalls."
+    VAULT_SUFFIX=""
+    if [ -n "$GLOBAL_VAULT" ] && [ -d "$GLOBAL_VAULT" ]; then
+        VAULT_SUFFIX=" (repo + global)"
+    fi
+    echo -e "VAULT CONTEXT LOADED${VAULT_SUFFIX} (${INVESTIGATION_COUNT} investigations, ${GOTCHA_COUNT} gotchas, ~${TOKENS_USED} tokens):${CONTEXT}\n\nBefore attempting any fix, CHECK investigations for past failed approaches. Before writing code, CHECK gotchas for known pitfalls. Entries marked [global] come from your personal cross-repo vault."
 fi
 
 exit 0
