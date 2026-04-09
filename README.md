@@ -155,7 +155,7 @@ Next session starts → better context loaded
 - `prompt-vault-search` — Searches vault for relevant context on user prompts
 - `post-tool-design-check` — Reminds to run design review after frontend edits
 
-### Skills (7)
+### Skills (8)
 
 - `brainstorm` — Structured exploration before implementation (context, clarify, propose, spec)
 - `sentinel-methodology` — Core methodology (investigations, self-healing, gates)
@@ -164,6 +164,7 @@ Next session starts → better context loaded
 - `coding-standards` — Style and quality rules
 - `eval-harness` — AI prompt/agent evaluation framework
 - `adversarial-eval` — Convergence protocol for finding flaws
+- `system-prompt-create` — Author production-quality system prompts for AI agents (guided interview, structured drafting, self-review, optional adversarial grill mode)
 
 ### Agents (8)
 

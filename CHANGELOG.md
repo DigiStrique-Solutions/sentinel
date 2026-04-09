@@ -4,6 +4,12 @@ All notable changes to Sentinel will be documented in this file.
 
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.14.0] - 2026-04-09
+
+### Added
+
+- **`system-prompt-create` skill** — A guided workflow for authoring production-quality system prompts for AI agents. Tiered interview captures the irreducible-minimum context (objective, tools, environment, eagerness dial, guardrails, stop conditions), drafts a structured prompt against the 10-section anatomy, and runs a self-review pass against the most common 2025-2026 anti-patterns (ALL-CAPS bombing, negative-only instructions, vague language, contradictions, eagerness mismatch, tool description mush, missing escape hatches, trust-boundary confusion). Multi-file skill with reference material for prompt anatomy, battle-tested snippets (eagerness dials, reversibility-categorized guardrails, parallel tool-call patterns, anti-hallucination, context-compaction awareness), and an adversarial `griller` subagent for opt-in stress-testing of finished prompts. Synthesizes guidance from Anthropic's context-engineering and Claude 4.6 best practices, OpenAI's GPT-5 prompting guide, and patterns from leaked production system prompts. Skill count: 7 → 8.
+
 ## [0.13.1] - 2026-04-06
 
 ### Fixed
