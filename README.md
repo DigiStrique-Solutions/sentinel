@@ -18,7 +18,7 @@ Sentinel is a Claude Code plugin that gives your AI assistant **institutional me
 
 **Verification Gap Detection** — Claude fixes a narrow symptom and writes a narrow test — but the user finds new bugs in the browser. Sentinel catches this with three checks: (1) test scope breadth — warns when only a single test function was run but multiple files changed, (2) adjacent test detection — finds test files that import modified modules and warns if they weren't executed, (3) bug-fix mode — detects bug-fix tasks and enforces reproduce-first verification (a failing test should precede the fix).
 
-**Loop & Batch Execution** — Some tasks are too large for one context window. `/sentinel-loop` runs a task repeatedly until a condition is met (fix all lint errors, get tests passing, tune prompts). `/sentinel-batch` breaks a massive task into work items and processes each with isolated sub-agents — generate codemaps for a 500K-line repo, migrate hundreds of files, bulk-add documentation. Both track progress to disk and are resumable.
+**Loop, Batch & Autoresearch** — Some tasks are too large for one context window or need many iterations to converge. `/sentinel-loop` runs a task repeatedly until a condition is met (fix all lint errors, get tests passing, tune prompts). `/sentinel-batch` breaks a massive task into work items and processes each with isolated sub-agents — generate codemaps for a 500K-line repo, migrate hundreds of files, bulk-add documentation. `/sentinel-autoresearch` runs a score-driven optimization loop — give it a task and a shell command that returns one number, and it iterates: propose an edit, score it, commit to a run branch if it improved or `git reset --hard` if it didn't, logging every attempt to an append-only TSV ledger. Inspired by [Karpathy's autoresearch](https://github.com/karpathy/autoresearch). All three track progress to disk and are resumable.
 
 **Context Optimization** — Sentinel minimizes its own context footprint. Workflow references use progressive disclosure (loaded on demand, not eagerly). The session-start loader operates within a configurable token budget, loading vault entries in priority order and filtering gotchas by relevance to recently changed code. `/sentinel-context` audits all context sources (CLAUDE.md, rules, MCP servers, plugins, hooks, vault) with token estimates and actionable recommendations.
 
@@ -189,7 +189,7 @@ Next session starts → better context loaded
 - `prompt-vault-search` — Searches vault for relevant context on user prompts
 - `post-tool-design-check` — Reminds to run design review after frontend edits
 
-### Skills (9)
+### Skills (11)
 
 - `brainstorm` — Structured exploration before implementation (context, clarify, propose, spec)
 - `sentinel-methodology` — Core methodology (investigations, self-healing, gates)
@@ -200,6 +200,8 @@ Next session starts → better context loaded
 - `adversarial-eval` — Convergence protocol for finding flaws
 - `system-prompt-create` — Author production-quality system prompts for AI agents (guided interview, structured drafting, self-review, optional adversarial grill mode)
 - `skill-audit` — Audit Claude Code skills via deterministic linter + adversarial griller; complements `anthropic-skills:skill-creator` (which is auto-installed alongside Sentinel)
+- `workflow-runner` — Execution protocol for Sentinel workflow skills: creates run directories, checkpoints progress, persists state across sessions, supports resumption
+- `workflow-bug-fix` — Disciplined bug-fix workflow (6 steps: understand → reproduce → failing test → fix → verify → heal vault) — the canonical example of a first-class workflow skill
 
 ### Agents (8)
 
@@ -216,7 +218,7 @@ Next session starts → better context loaded
 
 Common rules (9) plus language-specific extensions for Python (3) and TypeScript (3).
 
-### Commands (11)
+### Commands (12)
 
 - `/sentinel-bootstrap` — Scaffold vault and workflows for a new project
 - `/sentinel-health` — Dashboard showing vault health metrics
@@ -227,6 +229,7 @@ Common rules (9) plus language-specific extensions for Python (3) and TypeScript
 - `/sentinel-onboard` — Guided team onboarding for new members
 - `/sentinel-loop` — Convergence loop: repeat a task until a condition is met (lint cleanup, test fixes, prompt tuning)
 - `/sentinel-batch` — Map-reduce: break a huge task into work items, process each with sub-agents (codemap generation, mass migration, bulk docs)
+- `/sentinel-autoresearch` — Score-driven optimization loop with git-backed keep/discard and an append-only ledger. Tune prompts, fix lint, optimize perf — anything measurable by one number. Inspired by [karpathy/autoresearch](https://github.com/karpathy/autoresearch)
 - `/sentinel-context` — Audit all context sources with token estimates and optimization recommendations
 - `/sentinel-stats` — Effectiveness metrics: vault health, knowledge reuse rates, code discipline trends
 

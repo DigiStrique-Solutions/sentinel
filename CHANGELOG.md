@@ -4,6 +4,50 @@ All notable changes to Sentinel will be documented in this file.
 
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- **`/sentinel-autoresearch` command** — a generic, score-driven optimization loop with git-backed keep/discard and an append-only TSV ledger. Give it a `--task` and a `--score` shell command that prints one number, and it runs an autonomous loop: a sub-agent proposes one focused edit per iteration, the score command measures it, and the loop either commits to a run branch (`autoresearch/<run-id>`) if the score improved or does `git reset --hard HEAD` if it didn't. Every attempt — kept, discarded, or errored — is appended as a row to `.sentinel/autoresearch/<run-id>/attempts.tsv`. Two modes: `all-pass` (stop when a target value is reached) and `budget` (run until a wall-clock budget elapses, always hunting for aggregate improvements). Supports `--resume`, `--report`, and `--list`. Works for any task with one comparable number: lint cleanup, prompt tuning, test-runtime reduction, perf benchmark improvement, etc.
+  - **`commands/autoresearch.md`** — the command definition, following the same single-file markdown pattern as `loop.md` and `batch.md`.
+  - **`scripts/autoresearch-helpers.sh`** — dispatchable bash+jq helper library (~350 lines) handling all git, TSV, state-file, and scoring plumbing. Functions: `ar_preflight`, `ar_init_run`, `ar_run_score`, `ar_append_tsv`, `ar_commit_kept`, `ar_discard_working_tree`, `ar_update_state`, `ar_is_improvement`, `ar_list_runs`, `ar_report`. Each function is safe to call repeatedly and writes state to disk immediately so a crash mid-iteration leaves a resumable run.
+  - **Never tracks `.sentinel/`** — on init, the helper appends `.sentinel/` to `.git/info/exclude` (local, uncommitted) so the TSV ledger and state files can't be accidentally committed and then wiped by a `git reset --hard` on the next discard.
+  - **Per-run constraints file** — an autoresearch-style `constraints.md` (inspired by Karpathy's `program.md`) is written to each run's directory, re-read by the sub-agent each iteration. Default stub includes the simplicity criterion and rules forbidding score-command modification, test-weakening, and dependency changes.
+  - **Never auto-merges** — the run branch is left intact for the user to review, merge, cherry-pick, or delete. This command only optimizes, it does not integrate.
+
+### Design notes
+
+Directly inspired by two pieces of prior work:
+- **[karpathy/autoresearch](https://github.com/karpathy/autoresearch)** — Andrej Karpathy's experiment in autonomous ML research provided the score-driven keep/discard loop, git-based experiment tracking, the `program.md` constraints pattern, and the core insight that *one comparable number is the whole game*.
+- **Strique's `/eval-loop`** — an earlier, scoped implementation of the same loop for prompt/eval runs. Lessons from production use (need for per-attempt branches, append-only ledger, ability to "keep hunting" after first pass) motivated generalizing the pattern into a reusable Sentinel command anyone can run.
+
+Explicitly out of scope: parallel iterations, multi-metric optimization, auto-generated score commands, built-in visualization, and automatic integration with `sentinel-eval-harness` scenarios (follow-up item).
+
+### Changed
+
+- Command count: 11 → 12.
+- README updated with the new command and a credit link to Karpathy's autoresearch.
+
+## [0.17.0] - 2026-04-09
+
+### Added
+
+- **First-class workflows** — Sentinel workflows are now real Claude Code skills with a lightweight runner protocol, replacing (additively) the old pattern of plain markdown templates in `vault/workflows/`. Workflows gain auto-activation, scoping, progressive disclosure, state persistence, observability, and cross-session resumption without introducing a DSL or graph engine. Phase 1 ships the protocol and one canonical workflow; phase 2 will migrate the remaining 14 templates.
+  - **`workflow-runner` skill** — a ~200-line protocol that any workflow skill follows. Creates per-run directories under `vault/workflows/runs/<run-id>/`, checkpoints `step_started`/`step_completed`/`step_failed`/`workflow_finished` events to `events.jsonl`, mirrors progress in human-readable `state.md`, and supports idempotent resumption via `artifacts/step-N-*.md` marker files.
+  - **`workflow-bug-fix` skill** — first canonical workflow skill, migrated from `templates/workflows/bug-fix.md`. Same 6-step playbook (understand → reproduce → failing test → fix → verify → heal vault), now with `workflow: true` frontmatter, explicit `workflow-state.sh` calls at each transition, and per-step artifact writing for resumability. Preserves the Iron Law ("NO FIXES WITHOUT ROOT CAUSE INVESTIGATION FIRST") and the 2-failure-context-poisoning / 3-failure-architecture-question escalation gates.
+  - **`scripts/workflow-state.sh`** — deterministic bash+jq state manager (~300 lines). Single source of truth for workflow run state. Subcommands: `start`, `step-start`, `step-complete`, `step-fail`, `finish`, `find-active`, `list`, `status`. Tested end-to-end (start → 2 steps → failure → finish → archive).
+  - **`/sentinel-workflow` command** — user-facing interface for listing, inspecting, resuming, starting, and aborting workflow runs. `list` / `status [run-id]` / `resume [run-id]` / `start <workflow>` / `abort [run-id]`. Resume loads `state.md`, respects artifact markers for idempotency, and picks up from the current step.
+  - **`session-start-workflow-detect.sh` hook** — new SessionStart hook that scans `vault/workflows/runs/` for in-progress runs and surfaces them in the session header with a one-line resume hint. Fails soft, never blocks session start.
+
+### Design notes
+
+Based on research across Anthropic's "Building Effective Agents," 8+ third-party Claude Code workflow plugins, and 7 agentic frameworks (LangGraph, Temporal, Dify, n8n, CrewAI, Inngest, AutoGen). Key findings: (1) every plugin that tried to build a declarative workflow DSL failed to ship anything users could author; the ones that shipped used markdown playbooks. (2) Anthropic's own guidance explicitly warns against framework abstractions. (3) The Inngest "named cached step" pattern translates directly: artifact files serve as idempotency markers for resumption. (4) Sentinel's existing `/sentinel-loop` and `/sentinel-batch` are already workflow primitives (loop + fan-out) — workflow steps invoke them rather than reimplementing. Full research report and design rationale in the commit that introduces this feature.
+
+### Changed
+
+- Skill count: 9 → 11.
+- README workflow section updated with the new primitives.
+
 ## [0.16.0] - 2026-04-09
 
 ### Added

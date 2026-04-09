@@ -224,7 +224,20 @@ def check_body(body: str, body_start_line: int, findings: List[Finding]) -> None
     body_no_code = strip_code_blocks(body)
     all_caps_matches = ALL_CAPS_WORD.findall(body_no_code)
     # Filter out common acronyms that aren't really shouting
-    common_acronyms = {"SKILL", "JSON", "YAML", "HTML", "CSS", "HTTP", "HTTPS", "API", "CLI", "URL", "TODO", "FIXME", "NOTE", "MCP", "TDD", "PR", "OWASP", "SQL", "TTS", "LLM", "MCP", "SDK", "PDF", "DOCX", "XLSX", "PPTX", "REST", "GRPC"}
+    common_acronyms = {
+        # File formats and protocols
+        "JSON", "YAML", "HTML", "CSS", "HTTP", "HTTPS", "REST", "GRPC", "URL", "URI",
+        "PDF", "DOCX", "XLSX", "PPTX", "CSV", "TSV", "XML", "SVG", "PNG", "JPG",
+        # Languages and frameworks
+        "SQL", "SKILL", "API", "CLI", "SDK", "MCP", "LLM", "TTS", "STT",
+        # Testing and workflow terminology
+        "TDD", "BDD", "DDD", "RED", "GREEN", "REFACTOR", "STOP", "PASS", "FAIL",
+        "ALL", "NONE", "TODO", "FIXME", "NOTE", "HACK", "XXX",
+        # Security / audit
+        "OWASP", "CVE", "CWE", "DDOS", "XSS", "CSRF", "CORS",
+        # Git / VCS
+        "DIFF", "HEAD", "MERGE", "COMMIT",
+    }
     real_caps = [w for w in all_caps_matches if w not in common_acronyms]
     if len(real_caps) > ALL_CAPS_WARN_COUNT:
         sample = ", ".join(real_caps[:5])
