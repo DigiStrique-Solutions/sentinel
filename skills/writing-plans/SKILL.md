@@ -171,5 +171,5 @@ Never paper over ambiguity with a vague step. The whole point of a plan is to re
 
 - **Inputs:** approved spec from sentinel-brainstorm
 - **Outputs:** plan file at `vault/planning/<date>-<feature>-plan.md`
-- **Next step:** sentinel-subagent-driven-development (preferred) or sentinel-executing-plans
-- **Optional gate before next step:** sentinel-plan-council (when `Council required: true`)
+- **Next step:** invoke `sentinel-plan-execute` — that skill handles the council gate and routes to the right executor (subagent-driven-development or executing-plans). Don't pick the executor manually from this skill; let plan-execute do that decision once.
+- **Council trigger:** the `Council required` header field in the plan, plus the auto-trigger heuristic in `scripts/plan-needs-council.sh` (>5 files). Both are checked by plan-execute, not by this skill.
