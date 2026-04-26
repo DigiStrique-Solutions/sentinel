@@ -136,10 +136,11 @@ After the user approves the spec:
 
 ## Integration with Sentinel Workflows
 
-After brainstorming completes:
-- **New feature** → transition to `vault/workflows/new-feature.md` (step 2: Plan)
+After brainstorming completes and the spec is approved:
+
+- **For most implementation work** → invoke `sentinel-writing-plans` to decompose the spec into bite-sized 2-5 minute tasks. The plan file becomes the input to either `sentinel-subagent-driven-development` (preferred when subagents are available) or `sentinel-executing-plans`.
 - **Feature improvement** → transition to `vault/workflows/feature-improvement.md` (step 2: Define)
 - **Refactor** → transition to `vault/workflows/refactor.md` (step 1: Understand)
 - **Research needed** → transition to `vault/workflows/research-spike.md`
 
-The brainstorm output (spec) becomes the input for the workflow's planning phase.
+The brainstorm output is a **spec**, not a plan. The spec answers "what should we build and why." The plan answers "what's the exact sequence of file edits to build it." Don't conflate the two — see `sentinel-writing-plans` for the plan-vs-spec distinction.
