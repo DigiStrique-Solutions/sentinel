@@ -9,10 +9,33 @@ Configure optional Sentinel hooks and behavioral thresholds. Settings are saved 
 
 ## Step 1: Load Current Configuration
 
-Read `.sentinel/config.json` if it exists. If not, use defaults:
+Read `.sentinel/config.json` if it exists.
+
+**If it does not exist**, this is a sign the user installed Sentinel before bootstrap was fixed (or never ran bootstrap). Tell the user:
+
+```
+.sentinel/config.json is missing. The four optional hooks are pre-registered
+but silently disabled until this file exists.
+
+Run /sentinel-bootstrap to set up properly, or run /sentinel-doctor to heal
+this in place. /sentinel-config can also create it now with standard defaults
+(matching what /sentinel-bootstrap would write for the "standard" preset).
+
+Create .sentinel/config.json with standard defaults now? (Y/n)
+```
+
+If yes, run:
+```bash
+bash "${CLAUDE_PLUGIN_ROOT}/scripts/init-config.sh" "$(pwd)" standard init
+```
+
+Then continue with Step 2 using the just-written file. If no, proceed showing the user the in-memory defaults below — but make clear nothing is persisted until they save in Step 5.
+
+The standard defaults (matching `templates/presets/standard.json`'s `hooks_config`):
 
 ```json
 {
+  "preset": "standard",
   "vault": {
     "repo_path": "vault",
     "global_enabled": true,
@@ -20,9 +43,9 @@ Read `.sentinel/config.json` if it exists. If not, use defaults:
   },
   "hooks": {
     "git_autopilot": true,
-    "pattern_extraction": false,
-    "session_summary": false,
-    "vault_search_on_prompt": false,
+    "vault_search_on_prompt": true,
+    "pattern_extraction": true,
+    "session_summary": true,
     "design_review_reminder": false
   },
   "thresholds": {
@@ -36,10 +59,10 @@ Read `.sentinel/config.json` if it exists. If not, use defaults:
 
 ## Step 2: Show Current Settings
 
-Display the current configuration:
+Display the actual configuration loaded from `.sentinel/config.json` (don't hardcode states — read the file). Example with standard defaults:
 
 ```
-Sentinel Configuration
+Sentinel Configuration  (preset: standard)
 
 Vault:
   Repo vault path:                        ./vault/
@@ -50,9 +73,9 @@ Core Hooks:
   Git Autopilot (auto-branch + auto-commit):  ON
 
 Optional Hooks:
-  Pattern extraction on session end:      OFF
-  Session summary on session end:         OFF
-  Vault search on prompt submit:          OFF
+  Vault search on prompt submit:          ON
+  Pattern extraction on session end:      ON
+  Session summary on session end:         ON
   Design review reminder for .tsx/.css:   OFF
 
 Thresholds:
@@ -61,6 +84,8 @@ Thresholds:
   Gotcha staleness (days):                 30
   Investigation warning (days open):       7
 ```
+
+For each hook, render `ON` if `.hooks.<key> == true`, else `OFF`. The "ON/OFF" labels must reflect the file, not a hardcoded default.
 
 ## Step 3a: Configure Vault
 

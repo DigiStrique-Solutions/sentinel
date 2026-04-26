@@ -42,5 +42,12 @@
     "prompt-engineering.md",
     "research-spike.md"
   ],
-  "claude_md": "standard.md"
+  "claude_md": "standard.md",
+  "hooks_config": {
+    "git_autopilot": true,
+    "vault_search_on_prompt": true,
+    "pattern_extraction": true,
+    "session_summary": true,
+    "design_review_reminder": false
+  }
 }

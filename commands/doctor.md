@@ -118,6 +118,54 @@ Check `.sentinel/sessions/` for stale session files (PIDs that are no longer run
 - `.sentinel/batch/` — active batch state from `/sentinel-batch`
 - `.sentinel/fact-checks.yml` — project-specific fact check rules
 
+## Step 5b: Check `.sentinel/config.json`
+
+The four optional hooks (`pattern_extraction`, `vault_search_on_prompt`, `session_summary`, `design_review_reminder`) are pre-registered in `hooks/hooks.json`, but each one self-guards by reading `.sentinel/config.json`. If that file is missing or has missing keys, the hooks exit silently and Sentinel's self-learning features go dark.
+
+This step detects that condition and heals it.
+
+**Detection logic:**
+
+1. Check if `.sentinel/config.json` exists.
+
+   - If **missing**: report
+     ```
+     Configuration File
+     .sentinel/config.json    [MISSING] optional hooks are silently disabled
+     ```
+     Then offer to fix:
+     ```
+     Sentinel's self-learning hooks (pattern extraction, vault search, session summary)
+     require .sentinel/config.json to activate. Without it, they exit silently.
+
+     Create config.json with sensible defaults? (Y/n)
+     ```
+     If yes, run:
+     ```bash
+     bash "${CLAUDE_PLUGIN_ROOT}/scripts/init-config.sh" "$(pwd)" standard heal
+     ```
+     Parse the JSON output and report which hooks were enabled.
+
+2. If config.json **exists**, run the heal mode anyway to detect missing keys (the schema may have grown since the user's config was first written):
+   ```bash
+   bash "${CLAUDE_PLUGIN_ROOT}/scripts/init-config.sh" "$(pwd)" "<preset>" heal
+   ```
+   Where `<preset>` is read from `.sentinel/config.json`'s `preset` field, falling back to `standard` if absent.
+
+   Parse the JSON output:
+   - If `healed: true`, report:
+     ```
+     Configuration File
+     .sentinel/config.json    [FIXED] added missing keys: hooks.pattern_extraction, thresholds.gotcha_staleness_days
+     ```
+   - If `skipped: true`, report:
+     ```
+     Configuration File
+     .sentinel/config.json    [PASS] all keys present, N hooks enabled
+     ```
+
+**Why this matters:** users who installed Sentinel before bootstrap was fixed (or who deleted their config) currently have zero self-learning. This step is the safety net that gets them whole without a re-bootstrap.
+
 ## Step 6: Check CLAUDE.md
 
 Check if `CLAUDE.md` exists in the project root.

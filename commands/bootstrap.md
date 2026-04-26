@@ -201,7 +201,46 @@ Configured N tool permissions in .claude/settings.json
 Claude will now execute tests, lints, builds, and git commands autonomously — no permission prompts.
 ```
 
-## Step 8c: Offer Global Vault Setup
+## Step 8c: Initialize `.sentinel/config.json` (enable optional hooks)
+
+This is the step that makes Sentinel **self-learning out of the box**. Without it, the four optional hooks (pattern extraction, vault search on prompt, session summary, design review reminder) are pre-registered in `hooks/hooks.json` but each one self-guards by reading `.sentinel/config.json` — and exits silently if the file is missing. Result: nothing learns, no gotchas auto-create, no patterns get extracted.
+
+Run the init-config script, passing the preset chosen in Step 2:
+
+```bash
+bash "${CLAUDE_PLUGIN_ROOT}/scripts/init-config.sh" "$(pwd)" "<preset>" init
+```
+
+Where `<preset>` is `minimal`, `standard`, or `team` (the preset chosen in Step 2).
+
+The script:
+1. Reads the preset's `hooks_config` block (resolving `extends` if present)
+2. Writes `.sentinel/config.json` with hooks, vault paths, and thresholds
+3. Returns a JSON summary like:
+   ```json
+   {"created": true, "preset": "standard", "hooks_enabled": 4, "healed_keys": []}
+   ```
+
+If `.sentinel/config.json` already exists, the script is a no-op (skipped). User customizations are never trampled.
+
+After the script runs, parse the JSON and tell the user:
+
+```
+Configured N optional hooks in .sentinel/config.json
+
+Hooks now active for this project:
+  vault_search_on_prompt   — search vault before each prompt for relevant context
+  pattern_extraction       — auto-extract reusable patterns at session end
+  session_summary          — save session summaries for cross-session continuity
+  (design_review_reminder is OFF by default — toggle on with /sentinel-config if frontend project)
+
+Sentinel will now learn from this project as you work. Gotchas, investigations,
+and patterns accumulate automatically.
+```
+
+(Adjust the listed hooks based on which are actually enabled per preset — minimal only enables vault_search.)
+
+## Step 8d: Offer Global Vault Setup
 
 Sentinel supports a **global vault** at `~/.sentinel/vault/` for personal cross-repo knowledge — gotchas, investigations, and patterns that apply across every project you work on. This is separate from the repo vault just created.
 
@@ -235,6 +274,7 @@ Print a summary of what was created:
 - Whether CLAUDE.md was created or updated
 - Stack configuration applied
 - Number of tool permissions configured
+- **Number of optional hooks enabled** (from Step 8c)
 - Global vault status (exists / newly created / skipped)
 
 ## Step 10: Suggest Next Steps
@@ -242,10 +282,11 @@ Print a summary of what was created:
 Print:
 ```
 Next steps:
-1. Run `/health` to verify your setup
+1. Run `/sentinel-doctor` to verify your setup (checks vault, hooks, config)
 2. Review vault/quality/gates.md — these gates are checked before every task completion
 3. Read vault/workflows/bug-fix.md to see the investigation protocol in action
 4. Commit the vault/ directory to version control
+5. Toggle optional hooks any time with `/sentinel-config`
 ```
 
 For the **team** preset, add:
