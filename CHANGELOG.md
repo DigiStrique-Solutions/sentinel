@@ -6,6 +6,8 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), version
 
 ## [Unreleased]
 
+## [0.20.0] - 2026-05-08
+
 ### Fixed
 
 - **Stop-hook output now actually reaches the user and the agent.** The session-end hooks (`hooks/engine/stop-enforcer.sh` and `hooks/optional/stop-pattern-extractor.sh`) previously emitted plain stdout on `exit 0`, which per the [Claude Code hooks spec](https://code.claude.com/docs/en/hooks) is written only to the debug log on `Stop` events — never visible to the user without `--debug`, and never delivered to the agent as context. The vault-maintenance checklist and the pattern-extraction prompt were both structurally inert. Both hooks now emit JSON output that uses the documented `systemMessage` and `decision: block` channels.
