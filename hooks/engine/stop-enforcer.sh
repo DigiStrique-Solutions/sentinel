@@ -7,8 +7,15 @@
 # 3. Open investigations reminder
 # 4. Test file reminder (adversarial evaluation)
 #
-# Outputs warnings as a checklist. Does NOT block (exit 0) in v0.1 —
-# just warns. This can be upgraded to exit 2 for blocking enforcement.
+# Output behavior depends on .sentinel/config.json hooks.stop_blocking:
+#   false (default): emits {"systemMessage": "..."} so the user sees the
+#                    checklist (plain stdout would be silently swallowed
+#                    into the debug log on Stop events).
+#   true:            emits {"decision": "block", "reason": "..."} for HARD
+#                    warnings (failed tests, ghost files, incomplete todos),
+#                    re-engaging Claude for one more turn. Soft warnings
+#                    still go through systemMessage. The STOP_HOOK_ACTIVE
+#                    re-entry guard prevents infinite loops.
 #
 # Also cleans up .sentinel/ tracking directory and old session recovery files.
 
@@ -22,6 +29,13 @@ TRANSCRIPT_PATH=$(echo "$INPUT" | jq -r '.transcript_path // empty')
 
 VAULT_DIR="${CWD}/vault"
 
+# Read stop_blocking config flag (default false for backward-compatible rollout)
+CONFIG_FILE="${CWD}/.sentinel/config.json"
+STOP_BLOCKING=false
+if [ -f "$CONFIG_FILE" ]; then
+    STOP_BLOCKING=$(jq -r '.hooks.stop_blocking // false' "$CONFIG_FILE" 2>/dev/null || echo "false")
+fi
+
 # Graceful exit if vault doesn't exist
 if [ ! -d "$VAULT_DIR" ]; then
     exit 0
@@ -33,7 +47,12 @@ if [ "$STOP_HOOK_ACTIVE" = "true" ]; then
 fi
 
 TODAY=$(date +%Y-%m-%d)
-WARNINGS=""
+# HARD warnings: things that are genuinely broken (failing tests, ghost files,
+# incomplete todos). These re-engage Claude when stop_blocking is true.
+HARD_WARNINGS=""
+# SOFT warnings: reminders and quality nudges (open investigations, doc drift,
+# narrow test scope, missing changelog). These never block.
+SOFT_WARNINGS=""
 
 # --- 1. Check if code files were modified this session ---
 SENTINEL_DIR="${CWD}/.sentinel"
@@ -61,7 +80,7 @@ if [ -n "$FILES_CHANGED" ] && [ "$SKIP_CHANGELOG" = "false" ]; then
     if [ -d "${VAULT_DIR}/changelog" ]; then
         CHANGELOG_EXISTS=$(find "${VAULT_DIR}/changelog" -name "${TODAY}*" -type f 2>/dev/null | head -1)
         if [ -z "$CHANGELOG_EXISTS" ]; then
-            WARNINGS="${WARNINGS}\n- [ ] NO CHANGELOG for today (${TODAY}). Files were modified — create a changelog entry."
+            SOFT_WARNINGS="${SOFT_WARNINGS}\n- [ ] NO CHANGELOG for today (${TODAY}). Files were modified — create a changelog entry."
         fi
     fi
 fi
@@ -73,7 +92,7 @@ if [ -n "$TRANSCRIPT_PATH" ] && [ -f "$TRANSCRIPT_PATH" ]; then
         # Check if there's a recent investigation file
         RECENT_INVESTIGATION=$(find "${VAULT_DIR}/investigations" -name "20*" -mmin -60 -type f 2>/dev/null | head -1)
         if [ -z "$RECENT_INVESTIGATION" ]; then
-            WARNINGS="${WARNINGS}\n- [ ] Multiple failure signals detected but NO investigation logged. Create vault/investigations/ entry."
+            SOFT_WARNINGS="${SOFT_WARNINGS}\n- [ ] Multiple failure signals detected but NO investigation logged. Create vault/investigations/ entry."
         fi
     fi
 fi
@@ -89,7 +108,7 @@ if [ -d "${VAULT_DIR}/investigations" ]; then
         fi
     done
     if [ "$OPEN_COUNT" -gt 0 ]; then
-        WARNINGS="${WARNINGS}\n- [ ] ${OPEN_COUNT} open investigation(s) in vault/investigations/ — update status if any were resolved this session."
+        SOFT_WARNINGS="${SOFT_WARNINGS}\n- [ ] ${OPEN_COUNT} open investigation(s) in vault/investigations/ — update status if any were resolved this session."
     fi
 fi
 
@@ -97,7 +116,7 @@ fi
 if [ -f "$MODIFIED_FILE" ]; then
     TEST_FILES=$(grep -cE '(test_|_test\.|\.test\.|\.spec\.)' "$MODIFIED_FILE" 2>/dev/null; true)
     if [ "$TEST_FILES" -gt 0 ]; then
-        WARNINGS="${WARNINGS}\n- [ ] ${TEST_FILES} test file(s) written — consider adversarial evaluation to verify test quality."
+        SOFT_WARNINGS="${SOFT_WARNINGS}\n- [ ] ${TEST_FILES} test file(s) written — consider adversarial evaluation to verify test quality."
     fi
 fi
 
@@ -118,7 +137,7 @@ if [ -f "$MODIFIED_FILE" ]; then
         fi
     done < "$MODIFIED_FILE"
     if [ -n "$GHOST_FILES" ]; then
-        WARNINGS="${WARNINGS}\n- [ ] **GHOST FILES DETECTED** — These files were reported as modified but do not exist on disk:${GHOST_FILES}\n  Claude may have hallucinated these writes. Verify the intended changes were actually saved."
+        HARD_WARNINGS="${HARD_WARNINGS}\n- [ ] **GHOST FILES DETECTED** — These files were reported as modified but do not exist on disk:${GHOST_FILES}\n  Claude may have hallucinated these writes. Verify the intended changes were actually saved."
     fi
 fi
 
@@ -130,7 +149,7 @@ if [ -n "$FILES_CHANGED" ]; then
     if [ -x "$DRIFT_SCRIPT" ]; then
         DRIFT_OUTPUT=$("$DRIFT_SCRIPT" "$CWD" "$MODIFIED_FILE" 2>/dev/null || echo "")
         if [ -n "$DRIFT_OUTPUT" ]; then
-            WARNINGS="${WARNINGS}\n\n**DOCUMENTATION DRIFT DETECTED** — architecture docs reference files that changed or no longer exist:\n${DRIFT_OUTPUT}\n- [ ] Update the stale architecture docs listed above to reflect current code."
+            SOFT_WARNINGS="${SOFT_WARNINGS}\n\n**DOCUMENTATION DRIFT DETECTED** — architecture docs reference files that changed or no longer exist:\n${DRIFT_OUTPUT}\n- [ ] Update the stale architecture docs listed above to reflect current code."
         fi
     fi
 fi
@@ -148,7 +167,7 @@ if [ -f "$TODO_FILE" ]; then
     if [ "$INCOMPLETE" -gt 0 ]; then
         # List the incomplete items
         INCOMPLETE_LIST=$(jq -r '.todos[] | select(.status != "completed") | "    - [\(.status)] \(.content)"' "$TODO_FILE" 2>/dev/null || echo "")
-        WARNINGS="${WARNINGS}\n\n**INCOMPLETE TASKS** — ${INCOMPLETE} task(s) not marked as completed:\n${INCOMPLETE_LIST}\n- [ ] Complete all tasks before ending the session, or explicitly tell the user which tasks remain."
+        HARD_WARNINGS="${HARD_WARNINGS}\n\n**INCOMPLETE TASKS** — ${INCOMPLETE} task(s) not marked as completed:\n${INCOMPLETE_LIST}\n- [ ] Complete all tasks before ending the session, or explicitly tell the user which tasks remain."
     fi
 fi
 
@@ -176,23 +195,23 @@ if [ -n "$FILES_CHANGED" ] && [ "$FILE_COUNT" -gt 0 ]; then
 
         # --- Test verification ---
         if [ "$TEST_RUNS" -eq 0 ]; then
-            WARNINGS="${WARNINGS}\n- [ ] **TESTS NEVER RAN** — ${FILE_COUNT} file(s) modified but no test command found in evidence log."
+            HARD_WARNINGS="${HARD_WARNINGS}\n- [ ] **TESTS NEVER RAN** — ${FILE_COUNT} file(s) modified but no test command found in evidence log."
         elif [ -n "$TEST_FAILS" ]; then
             FAIL_TIME=$(echo "$TEST_FAILS" | cut -d'|' -f1)
             # Check if there's a passing test AFTER the last failure
             LAST_FAIL_LINE=$(grep -n '|test:.*|fail' "$EVIDENCE_FILE" 2>/dev/null | tail -1 | cut -d: -f1 || true)
             LAST_PASS_LINE=$(grep -n '|test:.*|pass' "$EVIDENCE_FILE" 2>/dev/null | tail -1 | cut -d: -f1 || true)
             if [ -z "$LAST_PASS_LINE" ] || [ "${LAST_PASS_LINE:-0}" -lt "${LAST_FAIL_LINE:-0}" ]; then
-                WARNINGS="${WARNINGS}\n- [ ] **TESTS FAILED** — Last test run at ${FAIL_TIME} ended with failure. No subsequent passing run found."
+                HARD_WARNINGS="${HARD_WARNINGS}\n- [ ] **TESTS FAILED** — Last test run at ${FAIL_TIME} ended with failure. No subsequent passing run found."
             fi
         fi
 
         # --- Lint verification ---
         if [ "$HAS_PYTHON" -gt 0 ] && ! grep -q '|lint:python|' "$EVIDENCE_FILE" 2>/dev/null; then
-            WARNINGS="${WARNINGS}\n- [ ] **PYTHON LINTER NEVER RAN** — ${HAS_PYTHON} Python file(s) modified but no ruff/pylint/flake8 found in evidence log."
+            HARD_WARNINGS="${HARD_WARNINGS}\n- [ ] **PYTHON LINTER NEVER RAN** — ${HAS_PYTHON} Python file(s) modified but no ruff/pylint/flake8 found in evidence log."
         fi
         if [ "$HAS_JS_TS" -gt 0 ] && ! grep -q '|lint:js|' "$EVIDENCE_FILE" 2>/dev/null; then
-            WARNINGS="${WARNINGS}\n- [ ] **JS/TS LINTER NEVER RAN** — ${HAS_JS_TS} JS/TS file(s) modified but no eslint/lint command found in evidence log."
+            HARD_WARNINGS="${HARD_WARNINGS}\n- [ ] **JS/TS LINTER NEVER RAN** — ${HAS_JS_TS} JS/TS file(s) modified but no eslint/lint command found in evidence log."
         fi
 
         # --- Lint failure check ---
@@ -201,18 +220,18 @@ if [ -n "$FILES_CHANGED" ] && [ "$FILE_COUNT" -gt 0 ]; then
             LAST_LINT_FAIL=$(grep -n '|lint:.*|fail' "$EVIDENCE_FILE" 2>/dev/null | tail -1 | cut -d: -f1 || true)
             LAST_LINT_PASS=$(grep -n '|lint:.*|pass' "$EVIDENCE_FILE" 2>/dev/null | tail -1 | cut -d: -f1 || true)
             if [ -z "$LAST_LINT_PASS" ] || [ "${LAST_LINT_PASS:-0}" -lt "${LAST_LINT_FAIL:-0}" ]; then
-                WARNINGS="${WARNINGS}\n- [ ] **LINT FAILED** — Last lint at ${LINT_FAIL_TIME} ended with failure. No subsequent passing run found."
+                HARD_WARNINGS="${HARD_WARNINGS}\n- [ ] **LINT FAILED** — Last lint at ${LINT_FAIL_TIME} ended with failure. No subsequent passing run found."
             fi
         fi
 
         # --- Type check for TypeScript ---
         if [ "$HAS_JS_TS" -gt 0 ] && [ "$TYPE_RUNS" -eq 0 ]; then
-            WARNINGS="${WARNINGS}\n- [ ] **TYPE CHECK NEVER RAN** — ${HAS_JS_TS} TS/JS file(s) modified but no tsc found in evidence log."
+            HARD_WARNINGS="${HARD_WARNINGS}\n- [ ] **TYPE CHECK NEVER RAN** — ${HAS_JS_TS} TS/JS file(s) modified but no tsc found in evidence log."
         fi
     else
         # No evidence file at all — no verification commands were run
         if [ "$FILE_COUNT" -gt 2 ]; then
-            WARNINGS="${WARNINGS}\n- [ ] **NO VERIFICATION COMMANDS RUN** — ${FILE_COUNT} file(s) modified but no tests, lint, or type checks found in the session."
+            HARD_WARNINGS="${HARD_WARNINGS}\n- [ ] **NO VERIFICATION COMMANDS RUN** — ${FILE_COUNT} file(s) modified but no tests, lint, or type checks found in the session."
         fi
     fi
 fi
@@ -239,7 +258,7 @@ if [ -f "$EVIDENCE_FILE" ] && [ -n "$FILES_CHANGED" ]; then
     done < <(grep '|test:.*|pass' "$EVIDENCE_FILE" 2>/dev/null || true)
 
     if [ "$NARROW_TESTS" -gt 0 ] && [ "$BROAD_TESTS" -eq 0 ] && [ "$FILE_COUNT" -gt 1 ]; then
-        WARNINGS="${WARNINGS}\n- [ ] **NARROW TEST SCOPE** — Only targeted tests were run. Consider running the full test suite to catch regressions in adjacent code."
+        SOFT_WARNINGS="${SOFT_WARNINGS}\n- [ ] **NARROW TEST SCOPE** — Only targeted tests were run. Consider running the full test suite to catch regressions in adjacent code."
     fi
 
     # Bug-fix mode: check for RED-GREEN pattern (reproduce-first)
@@ -249,7 +268,7 @@ if [ -f "$EVIDENCE_FILE" ] && [ -n "$FILES_CHANGED" ]; then
         FIRST_PASS_LINE=$(grep -n '|test:.*|pass' "$EVIDENCE_FILE" 2>/dev/null | head -1 | cut -d: -f1 || true)
 
         if [ -z "$FIRST_FAIL_LINE" ]; then
-            WARNINGS="${WARNINGS}\n- [ ] **NO REPRODUCE STEP** — This appears to be a bug fix, but no failing test was recorded before the fix. Consider reproducing the bug with a failing test first."
+            HARD_WARNINGS="${HARD_WARNINGS}\n- [ ] **NO REPRODUCE STEP** — This appears to be a bug fix, but no failing test was recorded before the fix. Consider reproducing the bug with a failing test first."
         elif [ -n "$FIRST_PASS_LINE" ] && [ "${FIRST_FAIL_LINE:-999}" -gt "${FIRST_PASS_LINE:-0}" ]; then
             # First test was a pass, fail came later — might be normal TDD, not a concern
             :
@@ -268,7 +287,7 @@ if [ -f "$EVIDENCE_FILE" ] && [ -n "$FILES_CHANGED" ]; then
             fi
         done < "$IMPACT_FILE"
         if [ -n "$UNRUN_IMPACTS" ]; then
-            WARNINGS="${WARNINGS}\n- [ ] **IMPACTED TESTS NOT RUN** — These test files import modified code but were not executed:${UNRUN_IMPACTS}"
+            HARD_WARNINGS="${HARD_WARNINGS}\n- [ ] **IMPACTED TESTS NOT RUN** — These test files import modified code but were not executed:${UNRUN_IMPACTS}"
         fi
     fi
 fi
@@ -281,18 +300,52 @@ if [ -d "${VAULT_DIR}/session-recovery" ]; then
     find "${VAULT_DIR}/session-recovery" -name "summary-*.md" -mmin +2880 -type f -delete 2>/dev/null || true
 fi
 
-# --- Output warnings ---
-if [ -n "$WARNINGS" ]; then
+# --- Output warnings as JSON ---
+# Plain stdout from a Stop hook on exit 0 goes only to the debug log per the
+# Claude Code hooks spec. To make warnings actually visible, we emit a
+# {systemMessage: ...} JSON object. When stop_blocking is enabled and there
+# are HARD warnings, we additionally use {decision: "block", reason: ...} so
+# Claude re-engages for one more turn to address the issues. The
+# STOP_HOOK_ACTIVE re-entry guard at the top of this file prevents loops.
+ALL_WARNINGS="${HARD_WARNINGS}${SOFT_WARNINGS}"
+if [ -n "$ALL_WARNINGS" ]; then
     # Log quality gate warnings to activity feed
     PLUGIN_LOGGER="$(dirname "$0")/activity-logger.sh"
     if [ -f "$PLUGIN_LOGGER" ]; then
         REPO_ROOT="$CWD" source "$PLUGIN_LOGGER"
-        # Count the number of warnings
-        WARN_COUNT=$(echo -e "$WARNINGS" | grep -c '^\- \[' 2>/dev/null; true)
+        WARN_COUNT=$(echo -e "$ALL_WARNINGS" | grep -c '^\- \[' 2>/dev/null; true)
         log_activity "Quality gate warnings: ${WARN_COUNT} issue(s) flagged at session end"
     fi
 
-    echo -e "VAULT MAINTENANCE CHECKLIST -- please address before stopping:\n${WARNINGS}"
+    if [ "$STOP_BLOCKING" = "true" ] && [ -n "$HARD_WARNINGS" ]; then
+        # Re-engage Claude. Include soft warnings in the reason so they are
+        # addressed in the same continuation turn rather than ignored.
+        REASON_BODY="VAULT MAINTENANCE -- the following must be addressed before this session can end:${HARD_WARNINGS}"
+        if [ -n "$SOFT_WARNINGS" ]; then
+            REASON_BODY="${REASON_BODY}
+
+Additional reminders (not blocking, but worth addressing):${SOFT_WARNINGS}"
+        fi
+        REASON_RENDERED=$(printf '%b' "$REASON_BODY")
+        jq -n --arg r "$REASON_RENDERED" '{decision: "block", reason: $r}'
+    else
+        # Visible to the user via systemMessage but does not re-engage Claude.
+        # This is the default behavior — preserves "warn only" semantics while
+        # actually surfacing warnings instead of silently swallowing them.
+        MSG_BODY="Sentinel session-end checks:"
+        if [ -n "$HARD_WARNINGS" ]; then
+            MSG_BODY="${MSG_BODY}
+
+Issues:${HARD_WARNINGS}"
+        fi
+        if [ -n "$SOFT_WARNINGS" ]; then
+            MSG_BODY="${MSG_BODY}
+
+Reminders:${SOFT_WARNINGS}"
+        fi
+        MSG_RENDERED=$(printf '%b' "$MSG_BODY")
+        jq -n --arg m "$MSG_RENDERED" '{systemMessage: $m}'
+    fi
 fi
 
 # Auto-move resolved investigations to resolved/ subdirectory

@@ -25,6 +25,8 @@
     "git_autopilot": true,
     "vault_search_on_prompt": true,
     "pattern_extraction": false,
+    "background_extraction": false,
+    "stop_blocking": false,
     "session_summary": false,
     "design_review_reminder": false
   }

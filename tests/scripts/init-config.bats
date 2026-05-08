@@ -200,7 +200,7 @@ setup() {
     [ "$(jq -r '.thresholds.investigation_warning_days' "$cfg")" = "7" ]
 }
 
-@test "heal mode restores all five hook keys when all are missing" {
+@test "heal mode restores all hook keys when all are missing" {
     # Simulate an old install that had only vault and thresholds (no hooks block)
     mkdir -p "${PROJECT_DIR}/.sentinel"
     cat > "${PROJECT_DIR}/.sentinel/config.json" <<'EOF'
@@ -213,8 +213,13 @@ EOF
     run bash "$SCRIPT" "$PROJECT_DIR" standard heal
     assert_success
     local cfg="${PROJECT_DIR}/.sentinel/config.json"
-    [ "$(jq -r '.hooks | keys | length' "$cfg")" = "5" ]
+    # standard preset's hooks_config has 7 keys: git_autopilot,
+    # vault_search_on_prompt, pattern_extraction, background_extraction,
+    # stop_blocking, session_summary, design_review_reminder
+    [ "$(jq -r '.hooks | keys | length' "$cfg")" = "7" ]
     [ "$(jq -r '.hooks.pattern_extraction' "$cfg")" = "true" ]
+    [ "$(jq -r '.hooks.background_extraction' "$cfg")" = "false" ]
+    [ "$(jq -r '.hooks.stop_blocking' "$cfg")" = "false" ]
 }
 
 # --- JSON output shape ---

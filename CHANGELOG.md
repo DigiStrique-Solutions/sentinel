@@ -6,6 +6,27 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), version
 
 ## [Unreleased]
 
+### Fixed
+
+- **Stop-hook output now actually reaches the user and the agent.** The session-end hooks (`hooks/engine/stop-enforcer.sh` and `hooks/optional/stop-pattern-extractor.sh`) previously emitted plain stdout on `exit 0`, which per the [Claude Code hooks spec](https://code.claude.com/docs/en/hooks) is written only to the debug log on `Stop` events — never visible to the user without `--debug`, and never delivered to the agent as context. The vault-maintenance checklist and the pattern-extraction prompt were both structurally inert. Both hooks now emit JSON output that uses the documented `systemMessage` and `decision: block` channels.
+
+### Added
+
+- **`hooks.stop_blocking` config flag (default `false`)** — when `true`, `stop-enforcer.sh` re-engages Claude with a `decision: block` JSON output for HARD warnings (failing tests, ghost files, incomplete TodoWrite items, lint never run on changed code, missing reproduce-step in bug-fix mode) so the agent gets one more turn to address the issues before the session can end. The existing `STOP_HOOK_ACTIVE` re-entry guard caps re-engagement at one extra turn. SOFT warnings (open investigations, narrow test scope, doc drift, missing changelog) continue to surface via `systemMessage` and never block. When `stop_blocking` is `false`, all warnings (hard + soft) are emitted via `systemMessage` so the user sees the checklist — this is a strict improvement over the previous behavior, which silently swallowed the checklist into the debug log.
+
+- **`hooks.background_extraction` config flag (default `false`)** — opt-in for LLM-powered knowledge extraction at session end. When `true` (and `hooks.pattern_extraction` is also `true`, and `ANTHROPIC_API_KEY` is set, and `python3` is on `PATH`, and 3+ files were modified this session), `stop-pattern-extractor.sh` spawns a detached background process that runs the new `scripts/extract-knowledge.py` extractor. The Python script reads the session JSONL transcript, calls the Anthropic Messages API with a structured `tool_use` schema (`patterns`, `gotchas`, `investigations`, `decisions`), and writes any extracted items directly to the matching `vault/<subdir>/` with frontmatter that matches each subdir's existing convention. Dedup against existing files is by slugified title. An audit record per session is appended to `.sentinel/extraction-log.jsonl` so users can see exactly what got auto-extracted. Default model is `claude-haiku-4-5`; cost is roughly $0.001–0.005 per qualifying session.
+
+- **`scripts/extract-knowledge.py`** — standalone, stdlib-only knowledge extractor. Renders transcripts as readable text (preserving `tool_use`/`tool_result` blocks, capped at 60 KB from the tail), forces structured output via `tool_choice`, gracefully degrades to a no-op when prerequisites are missing (no API key, no transcript, no vault), and logs API errors to the audit log without surfacing as hook failures. Supports `--dry-run` for inspecting the rendered prompt without making API calls.
+
+### Changed
+
+- `templates/presets/{minimal,standard}.json` and `commands/config.md` and `commands/bootstrap.md` now include the two new flags. The `team` preset inherits via `extends: "standard"`.
+- `scripts/init-config.sh` heal mode automatically adds the two new keys (default `false`) to existing user configs. Verified: a config from before this change healed cleanly to add `hooks.background_extraction` and `hooks.stop_blocking` without modifying any existing values.
+
+### Why this matters
+
+Sentinel's "session-end safety net" — vault hygiene checklist, ghost-file detection, incomplete-todo audit, pattern extraction — was implemented as `cat` calls to stdout from Stop hooks. Per the official hooks spec, that output is only routed to the debug log for `Stop` events; it never reaches the agent and is not visible in the transcript. Every claim Sentinel made about "self-healing knowledge", "session-end enforcement", and "auto-extracted patterns" was carried entirely by mid-session skills, not the Stop hooks. This release closes that gap by switching to the documented `systemMessage` / `decision: block` channels for warnings, and by adding a deterministic background extractor that doesn't depend on the foreground LLM cooperating.
+
 ## [0.19.0] - 2026-04-09
 
 ### Added

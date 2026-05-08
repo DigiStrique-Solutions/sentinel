@@ -230,9 +230,15 @@ Configured N optional hooks in .sentinel/config.json
 
 Hooks now active for this project:
   vault_search_on_prompt   — search vault before each prompt for relevant context
-  pattern_extraction       — auto-extract reusable patterns at session end
+  pattern_extraction       — gates the session-end pattern-extraction hook
   session_summary          — save session summaries for cross-session continuity
-  (design_review_reminder is OFF by default — toggle on with /sentinel-config if frontend project)
+  (background_extraction   — OFF by default; when enabled with ANTHROPIC_API_KEY,
+                              the Stop hook spawns a background extractor that
+                              writes auto-extracted patterns/gotchas/investigations
+                              to vault/<subdir>/. Costs ~$0.001-0.005 per session.)
+  (stop_blocking           — OFF by default; when enabled, hard failures at
+                              session end re-engage Claude for one more turn.)
+  (design_review_reminder  — OFF by default; toggle on with /sentinel-config if frontend project)
 
 Sentinel will now learn from this project as you work. Gotchas, investigations,
 and patterns accumulate automatically.

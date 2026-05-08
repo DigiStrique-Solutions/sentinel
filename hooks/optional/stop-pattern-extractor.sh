@@ -1,85 +1,106 @@
 #!/bin/bash
-# STOP HOOK (optional): Prompt the agent to extract reusable patterns
+# STOP HOOK (optional): Background knowledge extraction at session end.
 #
-# At session end, if 3+ files were modified, outputs instructions for the
-# agent to review what it did and consider extracting reusable patterns
-# into vault/patterns/learned/.
+# At session end, if the session was substantial (3+ files modified), spawn
+# a background Python process that reads the transcript, calls the Anthropic
+# API with a structured tool-use schema, and writes any extracted patterns,
+# gotchas, investigations, or decisions to vault/<subdir>/.
 #
-# This hook outputs INSTRUCTIONS for the agent, not patterns directly.
-# The agent has session context awareness; a shell script does not.
+# WHY THIS EXISTS AS A BACKGROUND PROCESS:
+# Stop-hook stdout never reaches Claude on exit 0 (per the Claude Code hooks
+# spec — see https://code.claude.com/docs/en/hooks "Exit code output"). The
+# previous implementation cat-ed a "please extract patterns" prompt to stdout
+# and was structurally inert. This wrapper backgrounds an extractor that does
+# the work itself.
+#
+# REQUIREMENTS:
+#   - .sentinel/config.json: hooks.background_extraction = true (opt-in)
+#   - hooks.pattern_extraction = true (umbrella enable, set by presets)
+#   - ANTHROPIC_API_KEY env var
+#   - python3 on PATH
+#
+# Falls back to a no-op (clean exit 0) if any prerequisite is missing.
 
 set -euo pipefail
 
 INPUT=$(cat)
 CWD=$(echo "$INPUT" | jq -r '.cwd // empty')
 STOP_HOOK_ACTIVE=$(echo "$INPUT" | jq -r '.stop_hook_active // false')
+SESSION_ID=$(echo "$INPUT" | jq -r '.session_id // empty')
+TRANSCRIPT_PATH=$(echo "$INPUT" | jq -r '.transcript_path // empty')
 
 VAULT_DIR="${CWD}/vault"
-
-# Check if this optional hook is enabled via config
-CONFIG_FILE="${CWD}/.sentinel/config.json"
-if [ -f "$CONFIG_FILE" ]; then
-    ENABLED=$(jq -r '.hooks.pattern_extraction // false' "$CONFIG_FILE" 2>/dev/null || echo "false")
-else
-    ENABLED="false"
-fi
-[ "$ENABLED" != "true" ] && exit 0
-
-# Graceful exit if vault doesn't exist
-if [ ! -d "$VAULT_DIR" ]; then
-    exit 0
-fi
 
 # Don't run on re-entry
 if [ "$STOP_HOOK_ACTIVE" = "true" ]; then
     exit 0
 fi
 
-# Only run for sessions with 3+ modified files
+# Graceful exit if vault doesn't exist
+if [ ! -d "$VAULT_DIR" ]; then
+    exit 0
+fi
+
+# Read config — both flags must be true to opt in
+CONFIG_FILE="${CWD}/.sentinel/config.json"
+PATTERN_EXTRACTION=false
+BACKGROUND_EXTRACTION=false
+if [ -f "$CONFIG_FILE" ]; then
+    PATTERN_EXTRACTION=$(jq -r '.hooks.pattern_extraction // false' "$CONFIG_FILE" 2>/dev/null || echo "false")
+    BACKGROUND_EXTRACTION=$(jq -r '.hooks.background_extraction // false' "$CONFIG_FILE" 2>/dev/null || echo "false")
+fi
+if [ "$PATTERN_EXTRACTION" != "true" ] || [ "$BACKGROUND_EXTRACTION" != "true" ]; then
+    exit 0
+fi
+
+# Threshold: only run for sessions with 3+ modified files
 SENTINEL_DIR="${CWD}/.sentinel"
+if [ -n "$SESSION_ID" ]; then
+    SHORT_ID="${SESSION_ID:0:12}"
+    SENTINEL_DIR="${CWD}/.sentinel/sessions/${SHORT_ID}"
+fi
 MODIFIED_FILE="${SENTINEL_DIR}/modified-files.txt"
 
 FILE_COUNT=0
 if [ -f "$MODIFIED_FILE" ]; then
     FILE_COUNT=$(wc -l < "$MODIFIED_FILE" | tr -d ' ')
 fi
-
 if [ "$FILE_COUNT" -lt 3 ]; then
     exit 0
 fi
 
-# Determine what areas were changed
-AREAS=""
-if [ -f "$MODIFIED_FILE" ]; then
-    AREAS=$(cat "$MODIFIED_FILE" | sed 's|/[^/]*$||' | sort -u | head -5 | tr '\n' ', ' | sed 's/,$//')
+# Hard requirements: API key + python3 + transcript file
+if [ -z "${ANTHROPIC_API_KEY:-}" ]; then
+    exit 0
+fi
+if ! command -v python3 >/dev/null 2>&1; then
+    exit 0
+fi
+if [ -z "$TRANSCRIPT_PATH" ] || [ ! -f "$TRANSCRIPT_PATH" ]; then
+    exit 0
 fi
 
-# Load existing learned patterns for context
-EXISTING_PATTERNS=""
-if [ -d "${VAULT_DIR}/patterns/learned" ]; then
-    for f in "${VAULT_DIR}/patterns/learned/"*.md; do
-        [ -f "$f" ] || continue
-        NAME=$(basename "$f" .md)
-        CONF=$(grep "^confidence:" "$f" 2>/dev/null | head -1 | awk '{print $2}')
-        EXISTING_PATTERNS="${EXISTING_PATTERNS}\n- ${NAME} (confidence: ${CONF:-0.5})"
-    done
+# Resolve plugin root and the extractor script
+PLUGIN_ROOT="${CLAUDE_PLUGIN_ROOT:-$(cd "$(dirname "$0")/../.." && pwd)}"
+EXTRACTOR="${PLUGIN_ROOT}/scripts/extract-knowledge.py"
+if [ ! -f "$EXTRACTOR" ]; then
+    exit 0
 fi
 
-# Output instructions for the agent
-cat << EOF
-PATTERN EXTRACTION: This session modified ${FILE_COUNT} files across areas: ${AREAS}
+# Prepare a log directory under .sentinel/ so users can audit what was spawned.
+LOG_DIR="${CWD}/.sentinel"
+mkdir -p "$LOG_DIR"
+LOG_FILE="${LOG_DIR}/extraction.log"
 
-Review what you did this session and consider:
-1. Did you discover a non-obvious approach that worked? (e.g., "always X before Y")
-2. Did you find a reusable pattern? (e.g., "when changing X, also update Y")
-3. Did an existing pattern help or mislead you?
+# Spawn in background and detach so the Stop hook returns immediately.
+# `nohup ... &` + `disown` ensures the process survives shell exit and does
+# not block session end.
+nohup python3 "$EXTRACTOR" \
+    --transcript "$TRANSCRIPT_PATH" \
+    --modified-files "$MODIFIED_FILE" \
+    --vault "$VAULT_DIR" \
+    >> "$LOG_FILE" 2>&1 &
 
-Existing learned patterns:${EXISTING_PATTERNS:-" (none yet)"}
-
-If you identified a reusable pattern, save it to vault/patterns/learned/<pattern-name>.md
-with fields: title, area, confidence (start at 0.5), and description.
-
-Only extract patterns if something genuinely reusable emerged. Do not force patterns.
-EOF
+disown 2>/dev/null || true
 
 exit 0

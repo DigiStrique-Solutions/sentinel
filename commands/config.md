@@ -45,6 +45,8 @@ The standard defaults (matching `templates/presets/standard.json`'s `hooks_confi
     "git_autopilot": true,
     "vault_search_on_prompt": true,
     "pattern_extraction": true,
+    "background_extraction": false,
+    "stop_blocking": false,
     "session_summary": true,
     "design_review_reminder": false
   },
@@ -75,6 +77,8 @@ Core Hooks:
 Optional Hooks:
   Vault search on prompt submit:          ON
   Pattern extraction on session end:      ON
+  Background knowledge extraction (API):  OFF
+  Stop blocking on hard failures:         OFF
   Session summary on session end:         ON
   Design review reminder for .tsx/.css:   OFF
 
@@ -105,13 +109,17 @@ Ask the user which hooks to toggle. Present each hook with its current state and
 
 1. **Git Autopilot** (session-start-git.sh + stop-git.sh) — Auto-creates a branch when sessions start on main/master, and auto-commits all changes when sessions end. Enabled by default. Disable if you prefer to manage git yourself.
 
-2. **Pattern extraction** (stop-pattern-extractor.sh) — When a session ends, automatically extract reusable patterns from the work done and save them to `vault/patterns/learned/`. Useful for building up project-specific knowledge over time.
+2. **Pattern extraction** (stop-pattern-extractor.sh) — Umbrella flag controlling whether the session-end pattern-extraction hook runs at all. By itself this only gates the hook; actual extraction requires `background_extraction` (below) too.
 
-3. **Session summary** (stop-session-summary.sh) — When a session ends, save a summary of what was done to `vault/session-recovery/`. Useful for picking up where you left off in a new session.
+3. **Background knowledge extraction** (`hooks.background_extraction`) — When ON, the Stop hook spawns a background Python process that calls the Anthropic API with the session transcript and writes any extracted patterns, gotchas, investigations, or decisions directly to `vault/<subdir>/`. Requires `pattern_extraction: true`, `ANTHROPIC_API_KEY` in the environment, and `python3` on `PATH`. Without this flag, pattern extraction is a no-op (Stop-hook stdout never reaches Claude per the Claude Code hooks spec). Costs roughly $0.001–0.005 per qualifying session (3+ files modified) on the default model (`claude-haiku-4-5`). Off by default — enabling is an explicit consent to outbound API calls.
 
-4. **Vault search on prompt** (prompt-vault-search.sh) — Before processing each prompt, search `vault/gotchas/` and `vault/investigations/` for relevant entries. Adds latency but prevents repeating known mistakes.
+4. **Stop blocking** (`hooks.stop_blocking`) — When ON, the session-end vault-maintenance check uses a JSON `decision: block` to re-engage Claude for one more turn whenever a HARD warning fires (failed tests, ghost files, incomplete TodoWrite items, missing reproduce-step in bug-fix mode, no verification commands run). The `stop_hook_active` re-entry guard prevents loops. When OFF (default), the same warnings are surfaced via `systemMessage` JSON for the user to see, but Claude does not re-engage.
 
-5. **Design review reminder** (post-tool-design-check.sh) — After editing `.tsx` or `.css` files, remind to run design review. Only useful for frontend projects.
+5. **Session summary** (stop-session-summary.sh) — When a session ends, save a summary of what was done to `vault/session-recovery/`. Useful for picking up where you left off in a new session.
+
+6. **Vault search on prompt** (prompt-vault-search.sh) — Before processing each prompt, search `vault/gotchas/` and `vault/investigations/` for relevant entries. Adds latency but prevents repeating known mistakes.
+
+7. **Design review reminder** (post-tool-design-check.sh) — After editing `.tsx` or `.css` files, remind to run design review. Only useful for frontend projects.
 
 Let the user toggle each one on/off.
 
