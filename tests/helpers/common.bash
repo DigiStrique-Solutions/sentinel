@@ -63,6 +63,7 @@ create_hook_input() {
     local session_id=""
     local stop_hook_active="false"
     local transcript_path=""
+    local source=""
     local tool_name=""
     local tool_input_command=""
     local tool_input_file_path=""
@@ -79,6 +80,7 @@ create_hook_input() {
             session_id) session_id="$val" ;;
             stop_hook_active) stop_hook_active="$val" ;;
             transcript_path) transcript_path="$val" ;;
+            source) source="$val" ;;
             tool_name) tool_name="$val" ;;
             command) tool_input_command="$val" ;;
             file_path) tool_input_file_path="$val" ;;
@@ -95,6 +97,7 @@ create_hook_input() {
     [ -n "$session_id" ] && json=$(echo "$json" | jq --arg v "$session_id" '. + {session_id: $v}')
     [ "$stop_hook_active" = "true" ] && json=$(echo "$json" | jq '. + {stop_hook_active: true}')
     [ -n "$transcript_path" ] && json=$(echo "$json" | jq --arg v "$transcript_path" '. + {transcript_path: $v}')
+    [ -n "$source" ] && json=$(echo "$json" | jq --arg v "$source" '. + {source: $v}')
     [ -n "$prompt" ] && json=$(echo "$json" | jq --arg v "$prompt" '. + {prompt: $v}')
 
     # Tool input

@@ -213,13 +213,14 @@ EOF
     run bash "$SCRIPT" "$PROJECT_DIR" standard heal
     assert_success
     local cfg="${PROJECT_DIR}/.sentinel/config.json"
-    # standard preset's hooks_config has 7 keys: git_autopilot,
+    # standard preset's hooks_config has 8 keys: git_autopilot,
     # vault_search_on_prompt, pattern_extraction, background_extraction,
-    # stop_blocking, session_summary, design_review_reminder
-    [ "$(jq -r '.hooks | keys | length' "$cfg")" = "7" ]
+    # stop_blocking, codemap_refresh, session_summary, design_review_reminder
+    [ "$(jq -r '.hooks | keys | length' "$cfg")" = "8" ]
     [ "$(jq -r '.hooks.pattern_extraction' "$cfg")" = "true" ]
     [ "$(jq -r '.hooks.background_extraction' "$cfg")" = "false" ]
     [ "$(jq -r '.hooks.stop_blocking' "$cfg")" = "false" ]
+    [ "$(jq -r '.hooks.codemap_refresh' "$cfg")" = "false" ]
 }
 
 # --- JSON output shape ---

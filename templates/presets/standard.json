@@ -49,6 +49,7 @@
     "pattern_extraction": true,
     "background_extraction": false,
     "stop_blocking": false,
+    "codemap_refresh": false,
     "session_summary": true,
     "design_review_reminder": false
   }

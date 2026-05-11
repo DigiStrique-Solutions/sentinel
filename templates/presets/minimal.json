@@ -27,6 +27,7 @@
     "pattern_extraction": false,
     "background_extraction": false,
     "stop_blocking": false,
+    "codemap_refresh": false,
     "session_summary": false,
     "design_review_reminder": false
   }

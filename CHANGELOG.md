@@ -6,6 +6,35 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), version
 
 ## [Unreleased]
 
+## [0.21.0] - 2026-05-11
+
+### Added
+
+- **`/sentinel-codemap` command and the codemap auto-refresh subsystem.** A codemap (or any per-file generated documentation produced by `/sentinel-batch`) can now be registered for automatic refresh. Once registered, two opt-in hooks (`session-start-codemap-check.sh`, `stop-codemap-refresh.sh`) keep the codemap in sync with the source: at session start, the SessionStart hook scans every codemap manifest for drift caused by manual edits, `git pull`, or any out-of-band changes since the last session; at session end, the Stop hook intersects the session's `modified-files.txt` with every manifest and queues only the entries Claude actually touched. Both hooks spawn a detached background worker (`scripts/refresh-codemap.py`) that calls the Anthropic Messages API per affected file and writes the refreshed entry directly to disk. Deleted source files have their entries removed. Newly-added files matching the manifest's `target_glob` are detected at session start and get new entries generated.
+
+  - **`commands/codemap.md`** — new `/sentinel-codemap` command with four subcommands: `register <output_dir> --target <glob> --task "<prompt>"` (bootstrap a manifest from an existing `/sentinel-batch` output), `status [<output_dir>]` (show drift counts per codemap), `refresh [<output_dir>] [--dry-run]` (manually trigger a refresh in the foreground), and `list` (enumerate every registered codemap). Documents the end-to-end flow: `/sentinel-batch` first, then `/sentinel-codemap register`, then toggle `hooks.codemap_refresh` ON via `/sentinel-config`. After that, codemaps stay fresh without further action.
+
+  - **`scripts/codemap-helpers.sh`** — manifest CRUD and drift detection (~250 LOC, bash+python3). Subcommands: `register`, `detect-drift`, `detect-drift-files` (scope-limited for the Stop hook), `list-manifests`, `status`. Manifest format includes `task`, `target_glob`, `output_dir`, `model`, and an `entries` map of source path → `{entry_path, source_sha256, generated_at}`. Drift detection uses mtime-greater-than-generated_at as the cheap pass and SHA256 comparison as the verification pass to avoid spurious refreshes on `touch`-with-same-content. Added-file detection globs the target pattern and diffs against existing entries (skipped in scoped mode since it's a SessionStart concern). Handles both layouts produced by `/sentinel-batch`: nested-results (`<output>/results/<flat>.md`) and flat (`<output>/<flat>.md`); `entry_path` in the manifest is stored relative to `output_dir` with appropriate prefix.
+
+  - **`scripts/refresh-codemap.py`** — background worker (~270 LOC, stdlib-only). Reads a manifest, detects drift via the helpers script, classifies into `{modified, added, deleted}`, and for each modified-or-added source file calls the Anthropic API once (with the manifest's stored `task` prompt as system + the file content as user message) to regenerate the entry. New entries inherit the same directory layout as existing ones. Atomic manifest writes via tempfile+rename. Audit record per run at `.sentinel/codemap-refresh.jsonl`. Graceful no-ops on missing API key, missing manifest, or no drift. Supports `--dry-run` for plan-without-action and `--paths-file` for scope-limited refresh.
+
+  - **`hooks/optional/session-start-codemap-check.sh`** — SessionStart hook that detects drift across every manifest in the project's vault. Only runs on `source=startup` or `source=resume` (skips `clear`). Background-spawns the worker per drifting manifest; output goes through SessionStart's documented stdout-as-context channel so the agent sees "N codemap entries are being refreshed" at the top of the session.
+
+  - **`hooks/optional/stop-codemap-refresh.sh`** — Stop hook that reads the session's `modified-files.txt` and, for any manifest where Claude touched at least one tracked source, background-spawns the worker with `--paths-file` so only the session's edits are considered. Honors the `STOP_HOOK_ACTIVE` re-entry guard.
+
+  - **`hooks.codemap_refresh` config flag (default `false`)** — opt-in for both hooks. Requires `ANTHROPIC_API_KEY` and `python3`. Added to `templates/presets/{minimal,standard}.json`, surfaced in `commands/config.md`'s `/sentinel-config` flow, and auto-healed into existing user configs via `scripts/init-config.sh` heal mode (verified by updated `tests/scripts/init-config.bats`).
+
+  - **Tests** — 13 bats tests for `codemap-helpers.sh` (register, detect-drift, detect-drift-files scoping, list-manifests, status, unknown-subcommand), 7 bats tests for `session-start-codemap-check.sh` (all gating paths + the drift-triggers-spawn path), 7 bats tests for `stop-codemap-refresh.sh` (all gating paths + the modified-file-triggers-spawn path). Existing init-config test updated for the new 8-key hook count. Full suite: 279/279 passing.
+
+### Why this matters
+
+After `/sentinel-batch` generated a codemap, the output was static markdown — nothing watched source files, so the codemap silently drifted as soon as anyone edited code. Users either re-ran the full batch periodically (slow, wasteful) or accepted that the codemap was stale (defeats its purpose). The new subsystem closes this loop without per-edit overhead: drift detection is cheap (mtime + SHA), the API call only fires for files that actually changed, and refresh runs in the background so neither session start nor session end is blocked. Three change-source coverage matches the user's actual workflow: manual edits, `git pull`, and Claude Code edits all reach the same refresh path.
+
+### Changed
+
+- `tests/helpers/common.bash` — `create_hook_input` now accepts a `source=<startup|resume|clear>` arg so SessionStart hook tests can specify the source field. Backward-compatible (default empty).
+- `scripts/init-config.sh` heal mode now adds three keys to existing user configs: `hooks.background_extraction`, `hooks.stop_blocking`, `hooks.codemap_refresh`. Existing customizations on other keys are preserved.
+
 ## [0.20.0] - 2026-05-08
 
 ### Fixed
